@@ -30,7 +30,7 @@ export function exportAppDataToExcel(data: AppData) {
         Status: inv.status,
       };
       if (!inv.items.length) {
-        return [{ ...base, Item: '', Qty: '', Price: '', LineTotal: '' }];
+        return [{ ...base, Item: '', Qty: 0, Price: 0, LineTotal: 0 }];
       }
       return inv.items.map(item => ({
         ...base,
