@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppLayout from '@/components/layout/AppLayout';
 import StatCard from '@/components/ui/StatCard';
@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
 };
 
-export default function DashboardPage() {
+function DashboardContent() {
     const { dashboard, currentUser } = useAppStore();
     const searchParams = useSearchParams();
     const [showWelcome, setShowWelcome] = useState(false);
@@ -46,8 +46,8 @@ export default function DashboardPage() {
     useEffect(() => {
         if (searchParams.get('welcome') === '1' && currentUser) {
             setShowWelcome(true);
-            const t = window.setTimeout(() => setShowWelcome(false), 2600);
-            return () => window.clearTimeout(t);
+            const t = setTimeout(() => setShowWelcome(false), 2600);
+            return () => clearTimeout(t);
         }
         return;
     }, [searchParams, currentUser]);
@@ -244,5 +244,13 @@ export default function DashboardPage() {
                 </div>
             </div>
         </AppLayout>
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense>
+            <DashboardContent />
+        </Suspense>
     );
 }
