@@ -103,6 +103,18 @@ alter table public.invoice_items enable row level security;
 alter table public.transactions enable row level security;
 alter table public.inventory  enable row level security;
 
+-- ── Support Requests ─────────────────────────────────────────
+create table if not exists public.support_requests (
+  id         uuid default uuid_generate_v4() primary key,
+  user_id    uuid references auth.users(id) on delete set null,
+  name       text not null,
+  email      text not null,
+  message    text not null,
+  created_at timestamptz default now()
+);
+
+alter table public.support_requests enable row level security;
+
 -- Profiles
 create policy "own profile select" on public.profiles for select using (auth.uid() = id);
 create policy "own profile insert" on public.profiles for insert with check (auth.uid() = id);
@@ -143,6 +155,12 @@ create policy "own inventory select" on public.inventory for select using (auth.
 create policy "own inventory insert" on public.inventory for insert with check (auth.uid() = user_id);
 create policy "own inventory update" on public.inventory for update using (auth.uid() = user_id);
 create policy "own inventory delete" on public.inventory for delete using (auth.uid() = user_id);
+
+-- Support requests
+create policy "own support_requests insert" on public.support_requests for insert
+  with check (auth.uid() = user_id or user_id is null);
+create policy "own support_requests select" on public.support_requests for select
+  using (auth.uid() = user_id);
 
 -- ── Auto-create profile on signup ───────────────────────────
 create or replace function public.handle_new_user()

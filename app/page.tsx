@@ -28,7 +28,12 @@ export default function LoginPage() {
     const res = await login(email, password);
     if (!res.ok) {
       setLoading(false);
-      setError(res.error ?? 'Login failed.');
+      const msg = res.error ?? 'Login failed.';
+      setError(
+        msg.toLowerCase().includes('failed to fetch')
+          ? 'Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL/KEY, disable VPN/adblock, and retry.'
+          : msg
+      );
     }
     // On success: keep spinner alive — onAuthStateChange sets currentUser,
     // triggering the useEffect below which redirects to /dashboard.

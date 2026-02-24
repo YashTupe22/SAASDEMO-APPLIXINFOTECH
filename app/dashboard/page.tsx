@@ -25,16 +25,24 @@ function formatCurrency(v: number) {
     return `₹${v.toLocaleString('en-IN')}`;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type TooltipPayloadEntry = { name?: string; value?: number; color?: string };
+type TooltipLikeProps = { active?: boolean; payload?: TooltipPayloadEntry[]; label?: string };
+
+const CustomTooltip = ({ active, payload, label }: TooltipLikeProps) => {
     if (!active || !payload?.length) return null;
     return (
         <div className="glass-card" style={{ padding: '10px 14px', minWidth: 140, background: 'var(--navy-light)', borderColor: 'rgba(148,163,184,0.4)' }}>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</p>
-            {payload.map((entry: any) => (
-                <p key={entry.name} style={{ fontSize: 13, fontWeight: 600, color: entry.color }}>
-                    {entry.name}: {formatCurrency(entry.value)}
-                </p>
-            ))}
+            {payload.map((entry, idx) => {
+                const name = entry?.name ?? `Series ${idx + 1}`;
+                const value = typeof entry?.value === 'number' ? entry.value : 0;
+                const color = entry?.color ?? 'var(--text-primary)';
+                return (
+                    <p key={name + idx} style={{ fontSize: 13, fontWeight: 600, color }}>
+                        {name}: {formatCurrency(value)}
+                    </p>
+                );
+            })}
         </div>
     );
 };
@@ -46,9 +54,9 @@ function DashboardContent() {
 
     useEffect(() => {
         if (searchParams.get('welcome') === '1' && currentUser) {
-            setShowWelcome(true);
-            const t = setTimeout(() => setShowWelcome(false), 2600);
-            return () => clearTimeout(t);
+            const t1 = window.setTimeout(() => setShowWelcome(true), 0);
+            const t2 = window.setTimeout(() => setShowWelcome(false), 2600);
+            return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
         }
         return;
     }, [searchParams, currentUser]);
@@ -219,12 +227,12 @@ function DashboardContent() {
                                 paddingAngle={3}
                                 dataKey="value"
                             >
-                                {dashboard.expensePie.map((entry, i) => (
+                                {dashboard.expensePie.map(entry => (
                                     <Cell key={entry.name} fill={entry.color} />
                                 ))}
                             </Pie>
                                 <Tooltip
-                                    formatter={(v: any, name: any) => [`₹${Number(v).toLocaleString('en-IN')}`, name]}
+                                    formatter={(v: unknown, name: unknown) => [`₹${Number(v).toLocaleString('en-IN')}`, String(name)]}
                                     contentStyle={{
                                         background: 'var(--navy-light)',
                                         border: '1px solid rgba(148,163,184,0.4)',

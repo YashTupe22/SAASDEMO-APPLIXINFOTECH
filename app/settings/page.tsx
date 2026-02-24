@@ -7,6 +7,13 @@ import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/appStore';
 import { exportAppDataToExcel } from '@/lib/exportExcel';
 
+type ProfileFieldKey = 'businessName' | 'email' | 'phone' | 'gst' | 'address';
+type AccountFieldKey = 'adminName' | 'loginEmail' | 'password';
+
+type Field =
+    | { key: ProfileFieldKey; label: string; value: string; type: 'text' | 'email' | 'tel' }
+    | { key: AccountFieldKey; label: string; value: string; type: 'text' | 'email' | 'password'; readOnly: true };
+
 export default function SettingsPage() {
     const router = useRouter();
     const { data, currentUser, updateBusinessProfile, updatePreferences, resetBusinessData, deleteCurrentAccount, logout } = useAppStore();
@@ -15,7 +22,7 @@ export default function SettingsPage() {
     const [prefsDraft, setPrefsDraft] = useState(data.preferences);
     const [savedMsg, setSavedMsg] = useState('');
 
-    const sections = useMemo(() => {
+    const sections = useMemo<{ title: string; icon: React.ReactNode; fields: Field[] }[]>(() => {
         return [
             {
                 title: 'Business Profile',
@@ -91,10 +98,10 @@ export default function SettingsPage() {
                                         className="dark-input"
                                         type={field.type}
                                         value={field.value}
-                                        readOnly={(field as any).readOnly}
+                                        readOnly={'readOnly' in field ? field.readOnly : false}
                                         onChange={e => {
                                             if (sec.title !== 'Business Profile') return;
-                                            const key = (field as any).key as keyof typeof profileDraft;
+                                            const key: ProfileFieldKey = field.key as ProfileFieldKey;
                                             setProfileDraft(prev => ({ ...prev, [key]: e.target.value }));
                                         }}
                                         style={{ padding: '9px 12px', fontSize: 14 }}

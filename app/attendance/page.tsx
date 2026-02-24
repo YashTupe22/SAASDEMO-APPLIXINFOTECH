@@ -4,7 +4,7 @@ import { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Badge from '@/components/ui/Badge';
 import type { Employee } from '@/lib/mockData';
-import { Plus, X, Check, UserPlus } from 'lucide-react';
+import { X, Check, UserPlus } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
 
 const TODAY = new Date().toISOString().split('T')[0];

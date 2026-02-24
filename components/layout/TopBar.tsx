@@ -1,7 +1,7 @@
 'use client';
 
-import { Bell, Search, Menu, LogOut, Settings, User, X, LayoutDashboard, FileText, ArrowLeftRight, Boxes, Wallet, Users } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Bell, Search, Menu, LogOut, Settings, X, LayoutDashboard, FileText, ArrowLeftRight, Boxes, Users } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/appStore';
 
@@ -24,7 +24,6 @@ export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
     const { profile, currentUser, data, logout } = useAppStore();
 
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<SearchResult[]>([]);
     const [showSearch, setShowSearch] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
 
@@ -41,27 +40,34 @@ export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Search logic
-    useEffect(() => {
+    const results = useMemo<SearchResult[]>(() => {
         const q = query.trim().toLowerCase();
-        if (!q) { setResults([]); return; }
+        if (!q) return [];
 
         const found: SearchResult[] = [];
 
-        data.employees.filter(e => e.name.toLowerCase().includes(q) || e.role.toLowerCase().includes(q)).slice(0, 3).forEach(e =>
-            found.push({ type: 'Employee', label: e.name, sub: e.role, href: '/attendance', icon: <Users size={14} /> }));
+        data.employees
+            .filter(e => e.name.toLowerCase().includes(q) || e.role.toLowerCase().includes(q))
+            .slice(0, 3)
+            .forEach(e => found.push({ type: 'Employee', label: e.name, sub: e.role, href: '/attendance', icon: <Users size={14} /> }));
 
-        data.invoices.filter(i => i.client.toLowerCase().includes(q) || i.invoiceNo.toLowerCase().includes(q)).slice(0, 3).forEach(i =>
-            found.push({ type: 'Invoice', label: i.invoiceNo, sub: i.client, href: '/invoices', icon: <FileText size={14} /> }));
+        data.invoices
+            .filter(i => i.client.toLowerCase().includes(q) || i.invoiceNo.toLowerCase().includes(q))
+            .slice(0, 3)
+            .forEach(i => found.push({ type: 'Invoice', label: i.invoiceNo, sub: i.client, href: '/invoices', icon: <FileText size={14} /> }));
 
-        data.transactions.filter(t => t.note.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)).slice(0, 3).forEach(t =>
-            found.push({ type: t.type, label: t.category, sub: t.note, href: '/transactions', icon: <ArrowLeftRight size={14} /> }));
+        data.transactions
+            .filter(t => t.note.toLowerCase().includes(q) || t.category.toLowerCase().includes(q))
+            .slice(0, 3)
+            .forEach(t => found.push({ type: t.type, label: t.category, sub: t.note, href: '/transactions', icon: <ArrowLeftRight size={14} /> }));
 
-        data.inventory.filter(i => i.name.toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q)).slice(0, 3).forEach(i =>
-            found.push({ type: 'Inventory', label: i.name, sub: i.sku || i.category, href: '/inventory', icon: <Boxes size={14} /> }));
+        data.inventory
+            .filter(i => i.name.toLowerCase().includes(q) || (i.sku || '').toLowerCase().includes(q))
+            .slice(0, 3)
+            .forEach(i => found.push({ type: 'Inventory', label: i.name, sub: i.sku || i.category, href: '/inventory', icon: <Boxes size={14} /> }));
 
-        setResults(found.slice(0, 8));
-    }, [query, data]);
+        return found.slice(0, 8);
+    }, [query, data.employees, data.invoices, data.transactions, data.inventory]);
 
     const initials = (profile?.name || currentUser?.name || 'AI').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
 
@@ -101,7 +107,7 @@ export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
                             style={{ background: 'none', border: 'none', outline: 'none', color: '#f1f5f9', fontSize: 13, width: 130 }}
                         />
                         {query && (
-                            <button onClick={() => { setQuery(''); setResults([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0, display: 'flex' }}>
+                            <button onClick={() => { setQuery(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0, display: 'flex' }}>
                                 <X size={12} />
                             </button>
                         )}
@@ -111,7 +117,7 @@ export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
                     {showSearch && query.trim() && (
                         <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 320, background: '#111827', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', zIndex: 100, overflow: 'hidden' }}>
                             {results.length === 0 ? (
-                                <div style={{ padding: '16px 18px', color: '#475569', fontSize: 13, textAlign: 'center' }}>No results for "{query}"</div>
+                                <div style={{ padding: '16px 18px', color: '#475569', fontSize: 13, textAlign: 'center' }}>No results for &quot;{query}&quot;</div>
                             ) : (
                                 <>
                                     <div style={{ padding: '10px 14px 6px', fontSize: 11, color: '#475569', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>

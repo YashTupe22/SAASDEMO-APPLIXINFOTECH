@@ -68,10 +68,9 @@ export function exportAppDataToExcel(data: ExportData) {
     XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
   }
 
-  // Inventory (if present)
-  const anyData = data as any;
-  if (anyData.inventory?.length) {
-    const rows = anyData.inventory.map((i: any) => ({
+  // Inventory
+  if (data.inventory?.length) {
+    const rows = data.inventory.map(i => ({
       ID: i.id,
       Name: i.name,
       SKU: i.sku,
@@ -112,7 +111,7 @@ export function exportAppDataToExcel(data: ExportData) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `applix-demo-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.download = `synplix-data-${new Date().toISOString().slice(0, 10)}.xlsx`;
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -7,7 +7,7 @@ import { useAppStore } from '@/lib/appStore';
 import type { InventoryItem } from '@/lib/mockData';
 import { Plus, Package2, AlertTriangle, BarChart2 } from 'lucide-react';
 
-interface DraftItem extends Omit<InventoryItem, 'id'> {}
+type DraftItem = Omit<InventoryItem, 'id'>;
 
 export default function InventoryPage() {
   const { data, updateInventory } = useAppStore();
@@ -55,7 +55,7 @@ export default function InventoryPage() {
 
   const startEdit = (item: InventoryItem) => {
     setEditingId(item.id);
-    const { id, ...rest } = item;
+    const { ...rest } = item;
     setDraft(rest);
     setShowForm(true);
   };

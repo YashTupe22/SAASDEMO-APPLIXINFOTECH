@@ -321,7 +321,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const loginDemo = useCallback(() => { }, []);
 
   const logout = useCallback(() => {
-    supabase.auth.signOut();
+    supabase.auth.signOut().catch(err => console.error('signOut:', err));
   }, []);
 
   // ── Onboarding ────────────────────────────────────────────────────────────
@@ -520,6 +520,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const uid = uidRef.current;
     if (!uid) return;
     Promise.all([
+      // Dependent tables first
+      supabase.from('attendance').delete().eq('user_id', uid),
+      supabase.from('invoice_items').delete().eq('user_id', uid),
       supabase.from('employees').delete().eq('user_id', uid),
       supabase.from('invoices').delete().eq('user_id', uid),
       supabase.from('transactions').delete().eq('user_id', uid),

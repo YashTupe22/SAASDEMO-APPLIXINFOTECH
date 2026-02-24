@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -15,6 +15,7 @@ interface AppLayoutProps {
 export default function AppLayout({ children, title, subtitle }: AppLayoutProps) {
     const { ready, currentUser } = useAppStore();
     const router = useRouter();
+    const pathname = usePathname();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -30,8 +31,9 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
 
     // Close sidebar on route change (mobile UX)
     useEffect(() => {
-        closeSidebar();
-    }, [closeSidebar]);
+        const t = window.setTimeout(() => closeSidebar(), 0);
+        return () => window.clearTimeout(t);
+    }, [pathname, closeSidebar]);
 
     if (!ready) {
         return (

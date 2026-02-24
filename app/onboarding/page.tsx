@@ -58,8 +58,8 @@ export default function OnboardingPage() {
                         </div>
                         <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Synplix</span>
                     </div>
-                    <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>Welcome aboard! 🎉</h1>
-                    <p style={{ fontSize: 14, color: '#64748b' }}>Let's set up your workspace in 3 quick steps.</p>
+                    <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>Welcome aboard!</h1>
+                    <p style={{ fontSize: 14, color: '#64748b' }}>Let&apos;s set up your workspace in 3 quick steps.</p>
                 </div>
 
                 {/* Step indicators */}
