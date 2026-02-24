@@ -66,8 +66,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <Zap size={18} color="white" />
                 </div>
                 <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Applix</div>
-                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Infotech Services</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Synplix</div>
+                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Business Suite</div>
                 </div>
             </div>
 

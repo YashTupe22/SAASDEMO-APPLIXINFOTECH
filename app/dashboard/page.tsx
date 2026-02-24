@@ -18,6 +18,7 @@ import {
     Cell,
 } from 'recharts';
 import { useAppStore } from '@/lib/appStore';
+import { exportDashboardPdf } from '@/lib/exportDashboardPdf';
 
 function formatCurrency(v: number) {
     if (v < 0) return `-₹${Math.abs(v).toLocaleString('en-IN')}`;
@@ -27,8 +28,8 @@ function formatCurrency(v: number) {
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-        <div className="glass-card" style={{ padding: '10px 14px', minWidth: 140 }}>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>{label}</p>
+        <div className="glass-card" style={{ padding: '10px 14px', minWidth: 140, background: 'var(--navy-light)', borderColor: 'rgba(148,163,184,0.4)' }}>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</p>
             {payload.map((entry: any) => (
                 <p key={entry.name} style={{ fontSize: 13, fontWeight: 600, color: entry.color }}>
                     {entry.name}: {formatCurrency(entry.value)}
@@ -39,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 function DashboardContent() {
-    const { dashboard, currentUser } = useAppStore();
+    const { dashboard, currentUser, profile } = useAppStore();
     const searchParams = useSearchParams();
     const [showWelcome, setShowWelcome] = useState(false);
 
@@ -107,6 +108,16 @@ function DashboardContent() {
                     </div>
                 </div>
             )}
+            {/* Top actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                <button
+                    className="glow-btn"
+                    style={{ padding: '9px 18px', fontSize: 13 }}
+                    onClick={() => exportDashboardPdf(dashboard, profile)}
+                >
+                    <span>Download PDF</span>
+                </button>
+            </div>
             {/* Stat Cards */}
             <div
                 style={{
@@ -159,14 +170,14 @@ function DashboardContent() {
                 {/* Revenue Line Chart */}
                 <div className="glass-card" style={{ padding: 24 }}>
                     <div style={{ marginBottom: 20 }}>
-                        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Revenue vs Expenses</h2>
-                        <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Last 6 months (based on transactions)</p>
+                        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Revenue vs Expenses</h2>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Last 6 months (based on transactions)</p>
                     </div>
                     <ResponsiveContainer width="100%" height={260}>
                         <LineChart data={dashboard.revenueChart} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
                             <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="4 4" />
-                            <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
+                            <XAxis dataKey="month" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
                             <Tooltip content={<CustomTooltip />} />
                             <Line
                                 type="monotone"
@@ -194,8 +205,8 @@ function DashboardContent() {
                 {/* Expense Pie Chart */}
                 <div className="glass-card" style={{ padding: 24 }}>
                     <div style={{ marginBottom: 16 }}>
-                        <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Expense Breakdown</h2>
-                        <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>By category</p>
+                        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Expense Breakdown</h2>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>By category</p>
                     </div>
                     <ResponsiveContainer width="100%" height={200}>
                         <PieChart>
@@ -212,16 +223,16 @@ function DashboardContent() {
                                     <Cell key={entry.name} fill={entry.color} />
                                 ))}
                             </Pie>
-                            <Tooltip
-                                formatter={(v: any, name: any) => [`₹${Number(v).toLocaleString('en-IN')}`, name]}
-                                contentStyle={{
-                                    background: '#1e293b',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: 8,
-                                    color: '#f1f5f9',
-                                    fontSize: 13,
-                                }}
-                            />
+                                <Tooltip
+                                    formatter={(v: any, name: any) => [`₹${Number(v).toLocaleString('en-IN')}`, name]}
+                                    contentStyle={{
+                                        background: 'var(--navy-light)',
+                                        border: '1px solid rgba(148,163,184,0.4)',
+                                        borderRadius: 8,
+                                        color: 'var(--text-primary)',
+                                        fontSize: 13,
+                                    }}
+                                />
                         </PieChart>
                     </ResponsiveContainer>
                     {/* Legend */}
@@ -230,15 +241,15 @@ function DashboardContent() {
                             <div key={item.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
-                                    <span style={{ fontSize: 12, color: '#94a3b8' }}>{item.name}</span>
+                                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item.name}</span>
                                 </div>
-                                <span style={{ fontSize: 12, color: '#f1f5f9', fontWeight: 600 }}>
+                                <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
                                     ₹{item.value.toLocaleString('en-IN')}
                                 </span>
                             </div>
                         ))}
                         {dashboard.expensePie.length === 0 && (
-                            <p style={{ fontSize: 12, color: '#475569', marginTop: 8 }}>No expense data yet. Add expenses from Transactions or Expenses page.</p>
+                            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>No expense data yet. Add expenses from Transactions or Expenses page.</p>
                         )}
                     </div>
                 </div>

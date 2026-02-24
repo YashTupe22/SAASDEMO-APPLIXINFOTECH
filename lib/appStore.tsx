@@ -287,6 +287,16 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, [refresh, clearData]);
 
+  // Theme hydration: prefer localStorage, then profile.darkMode
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('synplix-theme');
+    const theme = stored === 'light' || stored === 'dark'
+      ? stored
+      : (profile?.darkMode === false ? 'light' : 'dark');
+    document.documentElement.dataset.theme = theme;
+  }, [profile?.darkMode]);
+
   // Keep invoiceCountRef in sync whenever invoices state changes
   useEffect(() => {
     invoiceCountRef.current = invoices.length;
@@ -499,6 +509,11 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setProfile(prev => prev ? { ...prev, emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth } : prev);
     supabase.from('profiles').update({ email_notifications: p.emailNotifications, dark_mode: p.darkMode, currency: p.currency, two_factor_auth: p.twoFactorAuth }).eq('id', uid)
       .then(({ error }) => { if (error) console.error('updatePreferences:', error.message); });
+    if (typeof window !== 'undefined') {
+      const theme = p.darkMode ? 'dark' : 'light';
+      window.localStorage.setItem('synplix-theme', theme);
+      document.documentElement.dataset.theme = theme;
+    }
   }, []);
 
   const resetBusinessData = useCallback(() => {

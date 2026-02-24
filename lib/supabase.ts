@@ -6,6 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 // loads cleanly. No real API calls are ever made during SSR/prerender since
 // all consumer components are 'use client'.
 export const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key-for-build'
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://nljtrilrephwybtakaxc.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_BP6RTNgur2Sys8Zz5W2zvg_fbPckZsr'
 );

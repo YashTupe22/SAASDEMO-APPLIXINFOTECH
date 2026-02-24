@@ -3,8 +3,8 @@ import "./globals.css";
 import { AppStoreProvider } from "@/lib/appStore";
 
 export const metadata: Metadata = {
-  title: "Applix Infotech — Business Dashboard",
-  description: "Modern SaaS business management platform for Applix Infotech Services.",
+  title: "Synplix — Business Dashboard",
+  description: "Modern SaaS business management platform for Synplix.",
 };
 
 export const viewport: Viewport = {

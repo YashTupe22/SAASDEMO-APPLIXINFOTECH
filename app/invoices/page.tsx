@@ -231,7 +231,7 @@ export default function InvoicesPage() {
                             </div>
                             <div>
                                 <h2 style={{ fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>{preview.invoiceNo}</h2>
-                                <p style={{ fontSize: 12, color: '#64748b' }}>Applix Infotech Services</p>
+                                <p style={{ fontSize: 12, color: '#64748b' }}>Synplix</p>
                             </div>
                             <div style={{ marginLeft: 'auto' }}>
                                 <Badge variant={preview.status === 'Paid' ? 'success' : 'warning'}>{preview.status}</Badge>

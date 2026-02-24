@@ -56,7 +56,7 @@ export default function OnboardingPage() {
                         <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 18px rgba(59,130,246,0.45)' }}>
                             <Zap size={18} color="white" />
                         </div>
-                        <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Applix Infotech</span>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Synplix</span>
                     </div>
                     <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>Welcome aboard! 🎉</h1>
                     <p style={{ fontSize: 14, color: '#64748b' }}>Let's set up your workspace in 3 quick steps.</p>
@@ -103,16 +103,16 @@ export default function OnboardingPage() {
                             <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Business Name *</label>
                             <div style={{ position: 'relative' }}>
                                 <Building2 size={15} color="#64748b" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
-                                <input
-                                    id="ob-business-name"
-                                    className="dark-input"
-                                    placeholder="e.g. Applix Infotech Services"
-                                    value={businessName}
-                                    onChange={e => setBusinessName(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && canProceed && handleNext()}
-                                    autoFocus
-                                    style={{ padding: '13px 14px 13px 42px', fontSize: 15 }}
-                                />
+                                    <input
+                                        id="ob-business-name"
+                                        className="dark-input"
+                                        placeholder="e.g. Synplix Consulting"
+                                        value={businessName}
+                                        onChange={e => setBusinessName(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && canProceed && handleNext()}
+                                        autoFocus
+                                        style={{ padding: '13px 14px 13px 42px', fontSize: 15 }}
+                                    />
                             </div>
                         </div>
                     )}
