@@ -20,12 +20,13 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
     const closeSidebar = useCallback(() => setSidebarOpen(false), []);
     const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
 
+    const { profile } = useAppStore();
+
     useEffect(() => {
         if (!ready) return;
-        if (!currentUser) {
-            router.replace('/');
-        }
-    }, [ready, currentUser, router]);
+        if (!currentUser) { router.replace('/'); return; }
+        if (profile && !profile.onboardingComplete) { router.replace('/onboarding'); }
+    }, [ready, currentUser, profile, router]);
 
     // Close sidebar on route change (mobile UX)
     useEffect(() => {

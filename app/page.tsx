@@ -8,7 +8,7 @@ import { useAppStore } from '@/lib/appStore';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { ready, currentUser, login, loginDemo } = useAppStore();
+  const { ready, currentUser, login } = useAppStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -20,230 +20,60 @@ export default function LoginPage() {
     if (currentUser) router.replace('/dashboard');
   }, [ready, currentUser, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!email || !password) {
-      setError('Please fill in all fields.');
-      return;
-    }
+    if (!email || !password) { setError('Please fill in all fields.'); return; }
     setLoading(true);
-    const res = login(email, password);
+    const res = await login(email, password);
     setLoading(false);
-    if (!res.ok) {
-      setError(res.error ?? 'Login failed.');
-      return;
-    }
-    router.push('/dashboard?welcome=1');
-  };
-
-  const handleDemo = () => {
-    setEmail('demo@applix.in');
-    setPassword('demo123');
-    setLoading(true);
-    loginDemo();
-    setLoading(false);
-    router.push('/dashboard?welcome=1');
+    if (!res.ok) { setError(res.error ?? 'Login failed.'); return; }
+    router.push('/dashboard');
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #0d1b33 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Background glow blobs */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-10%',
-          left: '-5%',
-          width: 500,
-          height: 500,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '-15%',
-          right: '-5%',
-          width: 600,
-          height: 600,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #0d1b33 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', padding: '20px' }}>
+      {/* Glow blobs */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-15%', right: '-5%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.10) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`, backgroundSize: '40px 40px', pointerEvents: 'none' }} />
 
-      {/* Grid pattern overlay */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Card */}
-      <div
-        className="glass-card animate-fade-in"
-        style={{ width: '100%', maxWidth: 420, padding: '40px 36px', position: 'relative' }}
-      >
+      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 420, padding: '40px 36px', position: 'relative' }}>
         {/* Logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 28px rgba(59,130,246,0.5)',
-            }}
-          >
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 28px rgba(59,130,246,0.5)' }}>
             <Zap size={26} color="white" />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.3px' }}>
-              Applix Infotech
-            </h1>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.3px' }}>Applix Infotech</h1>
             <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Sign in to your dashboard</p>
           </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Email */}
           <div style={{ position: 'relative' }}>
-            <Mail
-              size={15}
-              color="#64748b"
-              style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-            />
-            <input
-              className="dark-input"
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{ padding: '12px 14px 12px 40px', fontSize: 14 }}
-            />
+            <Mail size={15} color="#64748b" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+            <input id="login-email" className="dark-input" type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={{ padding: '12px 14px 12px 40px', fontSize: 14 }} />
           </div>
 
-          {/* Password */}
           <div style={{ position: 'relative' }}>
-            <Lock
-              size={15}
-              color="#64748b"
-              style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}
-            />
-            <input
-              className="dark-input"
-              type={showPw ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={{ padding: '12px 42px 12px 40px', fontSize: 14 }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw(p => !p)}
-              style={{
-                position: 'absolute',
-                right: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#64748b',
-                padding: 2,
-              }}
-            >
+            <Lock size={15} color="#64748b" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+            <input id="login-password" className="dark-input" type={showPw ? 'text' : 'password'} placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ padding: '12px 42px 12px 40px', fontSize: 14 }} />
+            <button type="button" onClick={() => setShowPw(p => !p)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 2 }}>
               {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
 
-          {/* Forgot password */}
-          <div style={{ textAlign: 'right', marginTop: -8 }}>
-            <button
-              type="button"
-              onClick={() => alert('Password reset is not available in this local demo.')}
-              style={{ fontSize: 12, color: '#3b82f6', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
-            >
-              Forgot password?
-            </button>
-          </div>
+          {error && <p style={{ fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)' }}>{error}</p>}
 
-          {/* Error */}
-          {error && (
-            <p style={{ fontSize: 13, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.2)' }}>
-              {error}
-            </p>
-          )}
-
-          {/* Login button */}
-          <button
-            type="submit"
-            className="glow-btn"
-            style={{ padding: '13px 24px', fontSize: 15, marginTop: 4 }}
-            disabled={loading}
-          >
+          <button id="login-submit" type="submit" className="glow-btn" style={{ padding: '13px 24px', fontSize: 15, marginTop: 4 }} disabled={loading}>
             <span>{loading ? 'Signing in…' : 'Sign In'}</span>
           </button>
         </form>
 
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
-          <span style={{ fontSize: 12, color: '#475569' }}>or</span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
-        </div>
-
-        {/* Demo access */}
-        <button
-          type="button"
-          onClick={handleDemo}
-          style={{
-            width: '100%',
-            padding: '12px 24px',
-            borderRadius: 12,
-            background: 'rgba(59,130,246,0.1)',
-            border: '1px solid rgba(59,130,246,0.25)',
-            color: '#60a5fa',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.18)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.1)')}
-        >
-          ⚡ Demo Access
-        </button>
-
-        <p style={{ textAlign: 'center', fontSize: 12, color: '#334155', marginTop: 20 }}>
-          Demo: demo@applix.in / demo123
-        </p>
-
-        <p style={{ textAlign: 'center', fontSize: 12, color: '#475569', marginTop: 14 }}>
+        <p style={{ textAlign: 'center', fontSize: 12, color: '#475569', marginTop: 20 }}>
           New here?{' '}
-          <Link href="/signup" style={{ color: '#60a5fa', fontWeight: 700 }}>
-            Create an account
-          </Link>
+          <Link href="/signup" style={{ color: '#60a5fa', fontWeight: 700 }}>Create an account</Link>
         </p>
       </div>
     </div>

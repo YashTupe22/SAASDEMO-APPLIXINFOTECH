@@ -1,9 +1,19 @@
 'use client';
 
-import type { AppData } from './appStore';
+import type { Employee, InventoryItem, Invoice, Transaction } from './mockData';
 import * as XLSX from 'xlsx';
 
-export function exportAppDataToExcel(data: AppData) {
+type ExportData = {
+  employees: Employee[];
+  invoices: Invoice[];
+  transactions: Transaction[];
+  inventory: InventoryItem[];
+  businessProfile: { businessName: string; email: string; phone: string; gst: string; address: string };
+  preferences: { emailNotifications: boolean; darkMode: boolean; currency: string; twoFactorAuth: boolean };
+};
+
+export function exportAppDataToExcel(data: ExportData) {
+
   const wb = XLSX.utils.book_new();
 
   // Employees
