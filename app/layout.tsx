@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppStoreProvider } from "@/lib/appStore";
+import SwRegister from "@/components/SwRegister";
 
 export const metadata: Metadata = {
   title: "Synplix — Business Dashboard",
@@ -33,7 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AppStoreProvider>{children}</AppStoreProvider>
+        <AppStoreProvider>
+          <SwRegister />
+          {children}
+        </AppStoreProvider>
       </body>
     </html>
   );

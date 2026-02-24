@@ -215,7 +215,7 @@ export default function InvoicesPage() {
                 </div>
             </div>
 
-            {/* Preview Modal */
+            {/* Preview Modal */}
             {preview && (
                 <div className="modal-overlay" onClick={() => setPreview(null)}>
                     <div

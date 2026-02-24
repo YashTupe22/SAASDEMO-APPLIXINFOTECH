@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Phone, FileText, MapPin, ArrowRight, Check } from 'lucide-react';
+import { Building2, Phone, FileText, MapPin, ArrowRight, Check, Zap } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
 
 const STEPS = [
@@ -52,10 +52,11 @@ export default function OnboardingPage() {
 
                 {/* Brand header */}
                 <div style={{ textAlign: 'center', marginBottom: 36 }}>
-                    <div style={{ display: 'inline-block', marginBottom: 16 }}>
-                        <div style={{ background: '#ffffff', borderRadius: 14, padding: '10px 22px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
-                            <img src="/logo.png" alt="Synplix" style={{ height: 48, width: 'auto', objectFit: 'contain', display: 'block' }} />
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 18px rgba(59,130,246,0.45)' }}>
+                            <Zap size={18} color="white" />
                         </div>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Synplix</span>
                     </div>
                     <h1 style={{ fontSize: 26, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>Welcome aboard!</h1>
                     <p style={{ fontSize: 14, color: '#64748b' }}>Let&apos;s set up your workspace in 3 quick steps.</p>

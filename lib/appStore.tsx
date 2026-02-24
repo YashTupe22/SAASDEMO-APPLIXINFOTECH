@@ -18,6 +18,13 @@ import {
   writeBatch, query, orderBy,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { localDb } from './localDb';
+import {
+  loadFromLocal,
+  fetchAndCacheFromFirebase,
+  syncPendingToFirebase,
+  clearLocalData,
+} from './syncEngine';
 import type { Employee, InventoryItem, Invoice, InvoiceItem, Transaction } from './mockData';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -87,6 +94,7 @@ interface AppStoreContextValue {
   updatePreferences: (p: { emailNotifications: boolean; darkMode: boolean; currency: string; twoFactorAuth: boolean }) => void;
   resetBusinessData: () => void;
   deleteCurrentAccount: () => void;
+  isOnline: boolean;
   dashboard: {
     totalRevenue: number;
     totalExpenses: number;
@@ -231,6 +239,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
 
   // Refs for stable values inside callbacks (avoids stale closures)
   const uidRef = useRef<string | undefined>(undefined);
@@ -239,12 +250,35 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const invoiceCountRef = useRef<number>(0);
 
   const refresh = useCallback(async (uid: string) => {
-    const d = await loadUserData(uid);
-    setProfile(d.profile);
-    setEmployees(d.employees); empRef.current = d.employees;
-    setInvoices(d.invoices); invoiceCountRef.current = d.invoices.length;
-    setTransactions(d.transactions);
-    setInventory(d.inventory); invtRef.current = d.inventory;
+    // ── Step 1: Load from IndexedDB immediately (works offline) ──────────
+    const local = await loadFromLocal(uid);
+    const hasLocal =
+      local.profile !== null ||
+      local.invoices.length > 0 ||
+      local.employees.length > 0;
+    if (hasLocal) {
+      setProfile(local.profile);
+      setEmployees(local.employees); empRef.current = local.employees;
+      setInvoices(local.invoices); invoiceCountRef.current = local.invoices.length;
+      setTransactions(local.transactions);
+      setInventory(local.inventory); invtRef.current = local.inventory;
+    }
+
+    // ── Step 2: If online, sync pending → fetch from Firestore → re-load ─
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await syncPendingToFirebase(uid);
+        await fetchAndCacheFromFirebase(uid);
+        const fresh = await loadFromLocal(uid);
+        setProfile(fresh.profile);
+        setEmployees(fresh.employees); empRef.current = fresh.employees;
+        setInvoices(fresh.invoices); invoiceCountRef.current = fresh.invoices.length;
+        setTransactions(fresh.transactions);
+        setInventory(fresh.inventory); invtRef.current = fresh.inventory;
+      } catch (e) {
+        console.warn('[Sync] Background fetch failed — using local data:', e);
+      }
+    }
   }, []);
 
   const clearData = useCallback(() => {
@@ -278,6 +312,42 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
     return () => { unsubscribe(); clearTimeout(timeout); };
   }, [refresh, clearData]);
+
+  // ── Online / offline detection + background sync ──────────────────────
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      const uid = uidRef.current;
+      if (!uid) return;
+      try {
+        const count = await syncPendingToFirebase(uid);
+        if (count > 0) {
+          await fetchAndCacheFromFirebase(uid);
+          const fresh = await loadFromLocal(uid);
+          setProfile(fresh.profile);
+          setEmployees(fresh.employees); empRef.current = fresh.employees;
+          setInvoices(fresh.invoices); invoiceCountRef.current = fresh.invoices.length;
+          setTransactions(fresh.transactions);
+          setInventory(fresh.inventory); invtRef.current = fresh.inventory;
+          console.log(`[Sync] Flushed ${count} pending record(s) to Firestore.`);
+        }
+      } catch (e) {
+        console.warn('[Sync] Online sync failed:', e);
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+    // SW background-sync trigger
+    const handleSwSync = () => handleOnline();
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('sw-sync', handleSwSync);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sw-sync', handleSwSync);
+    };
+  }, []);
 
   // Theme hydration: prefer localStorage, then profile.darkMode
   useEffect(() => {
@@ -334,6 +404,8 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const loginDemo = useCallback(() => { }, []);
 
   const logout = useCallback(() => {
+    const uid = uidRef.current;
+    if (uid) clearLocalData(uid).catch(console.error);
     firebaseSignOut(auth).catch(err => console.error('signOut:', err));
   }, []);
 
@@ -361,11 +433,18 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     if (!uid) return;
     const id = crypto.randomUUID();
     const tx: Transaction = { id, ...input };
+    // 1. Update state immediately
     setTransactions(prev => [tx, ...prev]);
-    setDoc(doc(userCol(uid, 'transactions'), id), {
-      type: input.type, category: input.category,
-      amount: input.amount, date: input.date, note: input.note,
-    }).catch(err => console.error('addTransaction:', err));
+    // 2. Write local DB (pending)
+    localDb.transactions.put({ ...tx, _uid: uid, _syncStatus: 'pending' }).catch(console.error);
+    // 3. Try Firestore; on success mark synced
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      setDoc(doc(userCol(uid, 'transactions'), id), {
+        type: input.type, category: input.category,
+        amount: input.amount, date: input.date, note: input.note,
+      }).then(() => localDb.transactions.update(id, { _syncStatus: 'synced' }).catch(console.error))
+        .catch(() => console.warn('[Offline] Transaction queued for sync'));
+    }
   }, []);
 
   // ── addInvoice ────────────────────────────────────────────────────────────
@@ -381,13 +460,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       date: input.date, dueDate: input.dueDate || input.date,
       items: input.items, status: 'Pending',
     };
+    const createdAt = new Date().toISOString();
+    // 1. Update state immediately
     setInvoices(prev => [invoice, ...prev]);
-    setDoc(doc(userCol(uid, 'invoices'), id), {
-      invoiceNo, client: input.client,
-      date: input.date, dueDate: input.dueDate || input.date,
-      status: 'Pending', items: input.items,
-      createdAt: new Date().toISOString(),
-    }).catch(err => console.error('addInvoice:', err));
+    // 2. Write local DB (pending)
+    localDb.invoices.put({ ...invoice, _uid: uid, _syncStatus: 'pending', _createdAt: createdAt }).catch(console.error);
+    // 3. Try Firestore
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      setDoc(doc(userCol(uid, 'invoices'), id), {
+        invoiceNo, client: input.client,
+        date: input.date, dueDate: input.dueDate || input.date,
+        status: 'Pending', items: input.items, createdAt,
+      }).then(() => localDb.invoices.update(id, { _syncStatus: 'synced' }).catch(console.error))
+        .catch(() => console.warn('[Offline] Invoice queued for sync'));
+    }
   }, []);
 
   // ── toggleInvoiceStatus ───────────────────────────────────────────────────
@@ -400,8 +486,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       if (!target) return prev;
       const isPaid = target.status === 'Paid';
       const nextStatus: Invoice['status'] = isPaid ? 'Pending' : 'Paid';
-      updateDoc(doc(userCol(uid, 'invoices'), id), { status: nextStatus })
-        .catch(err => console.error('toggleInvoice:', err));
+      // Local DB: mark invoice status pending
+      localDb.invoices.update(id, { status: nextStatus, _syncStatus: 'pending' }).catch(console.error);
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        updateDoc(doc(userCol(uid, 'invoices'), id), { status: nextStatus })
+          .then(() => localDb.invoices.update(id, { _syncStatus: 'synced' }).catch(console.error))
+          .catch(() => console.warn('[Offline] Invoice status queued'));
+      }
       if (!isPaid) {
         const total = target.items.reduce((s, i) => s + i.qty * i.price, 0);
         const txId = crypto.randomUUID();
@@ -411,10 +502,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           note: `${target.invoiceNo} — ${target.client}`,
         };
         setTransactions(p => [tx, ...p]);
-        setDoc(doc(userCol(uid, 'transactions'), txId), {
-          type: 'Income', category: 'Client Payment', amount: total,
-          date: tx.date, note: tx.note,
-        }).catch(err => console.error('toggleInvoice tx:', err));
+        localDb.transactions.put({ ...tx, _uid: uid, _syncStatus: 'pending' }).catch(console.error);
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          setDoc(doc(userCol(uid, 'transactions'), txId), {
+            type: 'Income', category: 'Client Payment', amount: total,
+            date: tx.date, note: tx.note,
+          }).then(() => localDb.transactions.update(txId, { _syncStatus: 'synced' }).catch(console.error))
+            .catch(() => console.warn('[Offline] Toggle transaction queued'));
+        }
       }
       return prev.map(i => i.id === id ? { ...i, status: nextStatus } : i);
     });
@@ -430,19 +525,26 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setEmployees(next);
     if (!uid) return;
     const prevIds = new Set(prev.map(e => e.id));
+    const now = new Date().toISOString();
     for (const emp of next) {
       if (!prevIds.has(emp.id)) {
-        // New employee
-        setDoc(doc(userCol(uid, 'employees'), emp.id), {
-          name: emp.name, role: emp.role, avatar: emp.avatar,
-          attendance: emp.attendance ?? {}, createdAt: new Date().toISOString(),
-        }).catch(err => console.error('insertEmployee:', err));
+        localDb.employees.put({ ...emp, _uid: uid, _syncStatus: 'pending', _createdAt: now }).catch(console.error);
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          setDoc(doc(userCol(uid, 'employees'), emp.id), {
+            name: emp.name, role: emp.role, avatar: emp.avatar,
+            attendance: emp.attendance ?? {}, createdAt: now,
+          }).then(() => localDb.employees.update(emp.id, { _syncStatus: 'synced' }).catch(console.error))
+            .catch(() => console.warn('[Offline] Employee queued'));
+        }
       } else {
-        // Check if attendance changed
         const old = prev.find(e => e.id === emp.id);
         if (old && JSON.stringify(old.attendance) !== JSON.stringify(emp.attendance)) {
-          updateDoc(doc(userCol(uid, 'employees'), emp.id), { attendance: emp.attendance })
-            .catch(err => console.error('updateAttendance:', err));
+          localDb.employees.update(emp.id, { attendance: emp.attendance, _syncStatus: 'pending' }).catch(console.error);
+          if (typeof navigator !== 'undefined' && navigator.onLine) {
+            updateDoc(doc(userCol(uid, 'employees'), emp.id), { attendance: emp.attendance })
+              .then(() => localDb.employees.update(emp.id, { _syncStatus: 'synced' }).catch(console.error))
+              .catch(() => console.warn('[Offline] Attendance queued'));
+          }
         }
       }
     }
@@ -458,20 +560,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setInventory(next);
     if (!uid) return;
     const prevIds = new Set(prev.map(i => i.id));
+    const now = new Date().toISOString();
     for (const item of next) {
       if (!prevIds.has(item.id)) {
-        setDoc(doc(userCol(uid, 'inventory'), item.id), {
-          name: item.name, sku: item.sku, category: item.category, unit: item.unit,
-          openingQty: item.openingQty, currentQty: item.currentQty,
-          purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
-          reorderLevel: item.reorderLevel, gstRate: item.gstRate,
-          createdAt: new Date().toISOString(),
-        }).catch(err => console.error('insertInventory:', err));
+        localDb.inventory.put({ ...item, _uid: uid, _syncStatus: 'pending', _createdAt: now }).catch(console.error);
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          setDoc(doc(userCol(uid, 'inventory'), item.id), {
+            name: item.name, sku: item.sku, category: item.category, unit: item.unit,
+            openingQty: item.openingQty, currentQty: item.currentQty,
+            purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
+            reorderLevel: item.reorderLevel, gstRate: item.gstRate, createdAt: now,
+          }).then(() => localDb.inventory.update(item.id, { _syncStatus: 'synced' }).catch(console.error))
+            .catch(() => console.warn('[Offline] Inventory queued'));
+        }
       } else {
-        updateDoc(doc(userCol(uid, 'inventory'), item.id), {
-          currentQty: item.currentQty, sellingPrice: item.sellingPrice,
-          reorderLevel: item.reorderLevel,
-        }).catch(err => console.error('updateInventory:', err));
+        localDb.inventory.update(item.id, { currentQty: item.currentQty, sellingPrice: item.sellingPrice, reorderLevel: item.reorderLevel, _syncStatus: 'pending' }).catch(console.error);
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          updateDoc(doc(userCol(uid, 'inventory'), item.id), {
+            currentQty: item.currentQty, sellingPrice: item.sellingPrice, reorderLevel: item.reorderLevel,
+          }).then(() => localDb.inventory.update(item.id, { _syncStatus: 'synced' }).catch(console.error))
+            .catch(() => console.warn('[Offline] Inventory update queued'));
+        }
       }
     }
   }, []);
@@ -482,16 +591,24 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     const uid = uidRef.current;
     if (!uid) return;
     setProfile(prev => prev ? { ...prev, ...p } : prev);
-    updateDoc(userDoc(uid), { businessName: p.businessName, email: p.email, phone: p.phone, gst: p.gst, address: p.address })
-      .catch(err => console.error('updateBusinessProfile:', err));
+    localDb.profile.where('id').equals(uid).modify({ ...p, _syncStatus: 'pending' }).catch(console.error);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      updateDoc(userDoc(uid), { businessName: p.businessName, email: p.email, phone: p.phone, gst: p.gst, address: p.address })
+        .then(() => localDb.profile.where('id').equals(uid).modify({ _syncStatus: 'synced' }).catch(console.error))
+        .catch(() => console.warn('[Offline] Business profile queued'));
+    }
   }, []);
 
   const updatePreferences = useCallback((p: { emailNotifications: boolean; darkMode: boolean; currency: string; twoFactorAuth: boolean }) => {
     const uid = uidRef.current;
     if (!uid) return;
     setProfile(prev => prev ? { ...prev, emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth } : prev);
-    updateDoc(userDoc(uid), { emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth })
-      .catch(err => console.error('updatePreferences:', err));
+    localDb.profile.where('id').equals(uid).modify({ ...p, _syncStatus: 'pending' }).catch(console.error);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      updateDoc(userDoc(uid), { emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth })
+        .then(() => localDb.profile.where('id').equals(uid).modify({ _syncStatus: 'synced' }).catch(console.error))
+        .catch(() => console.warn('[Offline] Preferences queued'));
+    }
     if (typeof window !== 'undefined') {
       const theme = p.darkMode ? 'dark' : 'light';
       window.localStorage.setItem('synplix-theme', theme);
@@ -570,13 +687,14 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     addTransaction, addInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
     resetBusinessData, deleteCurrentAccount,
+    isOnline,
     dashboard,
   }), [
     ready, session, profile, currentUser, data,
     login, signup, loginDemo, logout, completeOnboarding,
     addTransaction, addInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
-    resetBusinessData, deleteCurrentAccount, dashboard,
+    resetBusinessData, deleteCurrentAccount, isOnline, dashboard,
   ]);
 
   return <AppStoreContext.Provider value={value}>{children}</AppStoreContext.Provider>;

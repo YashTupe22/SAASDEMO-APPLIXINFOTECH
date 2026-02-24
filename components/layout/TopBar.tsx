@@ -21,7 +21,7 @@ interface SearchResult {
 
 export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
     const router = useRouter();
-    const { profile, currentUser, data, logout } = useAppStore();
+    const { profile, currentUser, data, logout, isOnline } = useAppStore();
 
     const [query, setQuery] = useState('');
     const [showSearch, setShowSearch] = useState(false);
@@ -93,6 +93,23 @@ export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
 
             {/* Right */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+
+                {/* ── Online / Offline badge ── */}
+                <div
+                    title={isOnline ? 'Online — all data synced' : 'Offline — changes saved locally'}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        background: isOnline ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                        border: `1px solid ${isOnline ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                        borderRadius: 20, padding: '4px 9px', fontSize: 11, fontWeight: 600,
+                        color: isOnline ? '#22c55e' : '#ef4444',
+                        cursor: 'default', userSelect: 'none',
+                        transition: 'all 0.4s ease',
+                    }}
+                >
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: isOnline ? '#22c55e' : '#ef4444', display: 'inline-block', animation: isOnline ? 'none' : 'pulse 1.5s infinite' }} />
+                    {isOnline ? 'Online' : 'Offline'}
+                </div>
 
                 {/* ── Search ── */}
                 <div ref={searchRef} className="topbar-search" style={{ position: 'relative' }}>
