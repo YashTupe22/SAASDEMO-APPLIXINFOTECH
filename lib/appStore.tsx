@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { localDb } from './localDb';
+import { localDate } from './utils';
 import {
   loadFromLocal,
   fetchAndCacheFromFirebase,
@@ -498,7 +499,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         const txId = crypto.randomUUID();
         const tx: Transaction = {
           id: txId, type: 'Income', category: 'Client Payment', amount: total,
-          date: new Date().toISOString().split('T')[0],
+          date: localDate(),
           note: `${target.invoiceNo} — ${target.client}`,
         };
         setTransactions(p => [tx, ...p]);

@@ -6,6 +6,7 @@ import Badge from '@/components/ui/Badge';
 import type { TransactionType } from '@/lib/mockData';
 import { Plus, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
+import { localDate } from '@/lib/utils';
 
 const INCOME_CATEGORIES = ['Client Payment', 'Consulting', 'Recurring', 'Other Income'];
 const EXPENSE_CATEGORIES = ['Salaries', 'Infrastructure', 'Software', 'Marketing', 'Office', 'Travel', 'Misc'];
@@ -23,7 +24,7 @@ export default function TransactionsPage() {
     const [amount, setAmount] = useState('');
     const [category, setCategory] = useState(INCOME_CATEGORIES[0]);
     const [note, setNote] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(localDate());
     const [filterMonth, setFilterMonth] = useState<string>('All');
 
     const addTransaction = () => {
@@ -35,7 +36,7 @@ export default function TransactionsPage() {
             date,
             note: note.trim(),
         });
-        setAmount(''); setNote(''); setDate(new Date().toISOString().split('T')[0]);
+        setAmount(''); setNote(''); setDate(localDate());
         setShowForm(false);
     };
 

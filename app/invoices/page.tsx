@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import type { Invoice, InvoiceItem } from '@/lib/mockData';
 import { Plus, X, Eye, Check, FileText } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
+import { localDate } from '@/lib/utils';
 
 function getTotal(items: InvoiceItem[]) {
     return items.reduce((sum, i) => sum + i.qty * i.price, 0);
@@ -20,7 +21,7 @@ export default function InvoicesPage() {
 
     // Form state
     const [client, setClient] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(localDate());
     const [dueDate, setDueDate] = useState('');
     const [items, setItems] = useState<InvoiceItem[]>([{ description: '', qty: 1, price: 0 }]);
 
@@ -37,7 +38,7 @@ export default function InvoicesPage() {
             dueDate: dueDate || date,
             items: items.filter(it => it.description.trim()),
         });
-        setClient(''); setDate(new Date().toISOString().split('T')[0]); setDueDate('');
+        setClient(''); setDate(localDate()); setDueDate('');
         setItems([{ description: '', qty: 1, price: 0 }]);
         setShowForm(false);
     };

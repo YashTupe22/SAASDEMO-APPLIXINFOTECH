@@ -6,8 +6,9 @@ import Badge from '@/components/ui/Badge';
 import type { Employee } from '@/lib/mockData';
 import { X, Check, UserPlus } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
+import { localDate } from '@/lib/utils';
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = localDate();
 
 function getMonthDays(year: number, month: number): string[] {
     const days: string[] = [];

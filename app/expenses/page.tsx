@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Badge from '@/components/ui/Badge';
 import { useAppStore } from '@/lib/appStore';
+import { localDate } from '@/lib/utils';
 import { Plus, X, TrendingDown } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = ['Salaries', 'Infrastructure', 'Software', 'Marketing', 'Office', 'Travel', 'Misc'];
@@ -20,7 +21,7 @@ export default function ExpensesPage() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [note, setNote] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(localDate());
   const [filterMonth, setFilterMonth] = useState<string>('All');
 
   const expenses = useMemo(() => data.transactions.filter(t => t.type === 'Expense'), [data.transactions]);
@@ -44,7 +45,7 @@ export default function ExpensesPage() {
     });
     setAmount('');
     setNote('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(localDate());
     setShowForm(false);
   };
 
