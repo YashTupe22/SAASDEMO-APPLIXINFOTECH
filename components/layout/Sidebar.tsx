@@ -11,7 +11,6 @@ import {
     Boxes,
     Settings,
     LogOut,
-    Zap,
     X,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -49,25 +48,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </button>
 
             {/* Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36, paddingLeft: 6 }}>
-                <div
-                    style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 10,
-                        background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 18px rgba(59,130,246,0.5)',
-                        flexShrink: 0,
-                    }}
-                >
-                    <Zap size={18} color="white" />
-                </div>
-                <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Synplix</div>
-                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Business Suite</div>
+            <div style={{ marginBottom: 36, paddingLeft: 4 }}>
+                <div style={{ background: '#ffffff', borderRadius: 10, padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}>
+                    <img src="/logo.png" alt="Synplix" style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }} />
                 </div>
             </div>
 

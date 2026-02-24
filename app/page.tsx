@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Zap, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
 
 export default function LoginPage() {
@@ -48,14 +48,11 @@ export default function LoginPage() {
 
       <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 420, padding: '40px 36px', position: 'relative' }}>
         {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #3b82f6, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 28px rgba(59,130,246,0.5)' }}>
-            <Zap size={26} color="white" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 36 }}>
+          <div style={{ background: '#ffffff', borderRadius: 16, padding: '12px 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
+            <img src="/logo.png" alt="Synplix" style={{ height: 56, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.3px' }}>Synplix</h1>
-            <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Sign in to your dashboard</p>
-          </div>
+          <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>Sign in to your dashboard</p>
         </div>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
