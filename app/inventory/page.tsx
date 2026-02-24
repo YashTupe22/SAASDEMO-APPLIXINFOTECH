@@ -317,7 +317,7 @@ export default function InventoryPage() {
       {/* Inventory table */}
       <div className="glass-card" style={{ padding: 24 }}>
         <h2 style={{ fontSize: 15, fontWeight: 800, color: '#f1f5f9', marginBottom: 14 }}>Inventory List</h2>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
           <table className="data-table">
             <thead>
               <tr>

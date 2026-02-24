@@ -392,3 +392,114 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ─── Responsive grid utilities ─────────────────────────────
+   Use className="rg-3", "rg-2", "rg-4" instead of inline
+   gridTemplateColumns. CSS will collapse them on mobile.     */
+.rg-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.rg-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.rg-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+@media (max-width: 768px) {
+  .rg-4 { grid-template-columns: 1fr 1fr !important; }
+  .rg-3 { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 480px) {
+  .rg-4 { grid-template-columns: 1fr !important; }
+  .rg-2 { grid-template-columns: 1fr !important; }
+}
+
+/* ─── Horizontal-scrollable table wrapper ────────────────── */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
+/* Ensure table never shrinks below readable width */
+.table-scroll .data-table {
+  min-width: 580px;
+}
+
+/* ─── Modal — full-screen sheet on mobile ────────────────── */
+@media (max-width: 640px) {
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-inner {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92dvh;
+    overflow-y: auto;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 24px 18px !important;
+  }
+}
+
+/* ─── Invoice item rows — stack on small screens ─────────── */
+.inv-item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+@media (max-width: 600px) {
+  .inv-item-row {
+    flex-wrap: wrap;
+  }
+  .inv-item-row .inv-desc {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+  }
+  .inv-item-row .inv-qty  { flex: 1 1 calc(35% - 4px) !important; width: auto !important; }
+  .inv-item-row .inv-price { flex: 1 1 calc(65% - 4px) !important; width: auto !important; }
+  .inv-item-row .inv-total { display: none; }
+}
+
+/* ─── Toolbar flex — stack on very small screens ─────────── */
+@media (max-width: 480px) {
+  .toolbar-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .toolbar-row > * {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ─── PWA safe-area insets ───────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .main-content {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ─── Dashboard charts row ───────────────────────────────── */
+.chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Settings label-input row ───────────────────────────── */
+.setting-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .setting-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

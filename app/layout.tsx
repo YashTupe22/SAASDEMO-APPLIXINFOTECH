@@ -5,6 +5,16 @@ import { AppStoreProvider } from "@/lib/appStore";
 export const metadata: Metadata = {
   title: "Synplix — Business Dashboard",
   description: "Modern SaaS business management platform for Synplix.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Synplix",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {
@@ -12,6 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
+  themeColor: "#3b82f6",
 };
 
 export default function RootLayout({

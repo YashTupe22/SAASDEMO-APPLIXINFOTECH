@@ -258,7 +258,7 @@ export default function AttendancePage() {
             {/* Monthly Summary Table */}
             <div className="glass-card" style={{ padding: 24 }}>
                 <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', marginBottom: 18 }}>Monthly Summary</h2>
-                <div style={{ overflowX: 'auto' }}>
+                <div className="table-scroll">
                     <table className="data-table">
                         <thead>
                             <tr>

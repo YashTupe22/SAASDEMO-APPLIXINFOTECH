@@ -92,7 +92,7 @@ export default function SettingsPage() {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             {sec.fields.map(field => (
-                                <div key={field.label} style={{ display: 'grid', gridTemplateColumns: '180px 1fr', alignItems: 'center', gap: 16 }}>
+                                <div key={field.label} className="setting-row">
                                     <label style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{field.label}</label>
                                     <input
                                         className="dark-input"

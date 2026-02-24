@@ -121,7 +121,7 @@ export default function ExpensesPage() {
               <X size={16} />
             </button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, alignItems: 'flex-end' }}>
+          <div className="rg-4" style={{ alignItems: 'flex-end' }}>
             <div>
               <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Amount (₹) *</label>
               <input className="dark-input" type="number" min="1" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '10px 12px', fontSize: 14 }} />
@@ -178,6 +178,7 @@ export default function ExpensesPage() {
           </h2>
           <span style={{ fontSize: 12, color: '#64748b' }}>{filtered.length} entries</span>
         </div>
+        <div className="table-scroll">
         <table className="data-table">
           <thead>
             <tr>
@@ -211,6 +212,7 @@ export default function ExpensesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </AppLayout>
   );

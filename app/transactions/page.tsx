@@ -55,7 +55,7 @@ export default function TransactionsPage() {
         <AppLayout title="Transactions" subtitle="Track all income and expense entries">
 
             {/* Summary Panel */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+            <div className="rg-3" style={{ marginBottom: 24 }}>
                 <div className="glass-card" style={{ padding: '18px 22px', borderColor: 'rgba(34,197,94,0.2)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         <TrendingUp size={16} color="#22c55e" />
@@ -82,7 +82,7 @@ export default function TransactionsPage() {
             </div>
 
             {/* Toolbar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div className="toolbar-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
                 {/* Month filter */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 13, color: '#64748b' }}>Filter:</span>
@@ -131,7 +131,7 @@ export default function TransactionsPage() {
                         </h3>
                         <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={16} /></button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, alignItems: 'flex-end' }}>
+                    <div className="rg-4" style={{ alignItems: 'flex-end' }}>
                         <div>
                             <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Amount (₹) *</label>
                             <input className="dark-input" type="number" min="1" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '10px 12px', fontSize: 14 }} />
@@ -173,6 +173,7 @@ export default function TransactionsPage() {
                     </h2>
                     <span style={{ fontSize: 12, color: '#64748b' }}>{filtered.length} entries</span>
                 </div>
+                <div className="table-scroll">
                 <table className="data-table">
                     <thead>
                         <tr>
@@ -206,6 +207,7 @@ export default function TransactionsPage() {
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </AppLayout>
     );

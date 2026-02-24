@@ -174,7 +174,7 @@ function DashboardContent() {
             </div>
 
             {/* Charts Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 18 }}>
+            <div className="chart-grid">
                 {/* Revenue Line Chart */}
                 <div className="glass-card" style={{ padding: 24 }}>
                     <div style={{ marginBottom: 20 }}>

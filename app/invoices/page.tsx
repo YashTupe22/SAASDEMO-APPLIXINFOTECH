@@ -48,7 +48,7 @@ export default function InvoicesPage() {
     return (
         <AppLayout title="Invoices" subtitle="Manage client invoices and payment status">
             {/* Summary bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+            <div className="rg-3" style={{ marginBottom: 24 }}>
                 {[
                     { label: 'Total Invoices', value: invoices.length, color: '#60a5fa' },
                     { label: 'Paid', value: `₹${totalRevenue.toLocaleString('en-IN')}`, color: '#22c55e' },
@@ -84,7 +84,7 @@ export default function InvoicesPage() {
                         <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 18 }}>
+                    <div className="rg-3" style={{ marginBottom: 18 }}>
                         <div>
                             <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Client Name *</label>
                             <input className="dark-input" placeholder="Client / company" value={client} onChange={e => setClient(e.target.value)} style={{ padding: '10px 12px', fontSize: 14 }} />
@@ -109,11 +109,11 @@ export default function InvoicesPage() {
                             <span style={{ width: 32 }} />
                         </div>
                         {items.map((item, i) => (
-                            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                                <input className="dark-input" style={{ flex: 3, padding: '9px 12px', fontSize: 13 }} placeholder="Service description" value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} />
-                                <input className="dark-input" style={{ width: 70, padding: '9px 10px', fontSize: 13, textAlign: 'center' }} type="number" min="1" value={item.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} />
-                                <input className="dark-input" style={{ width: 120, padding: '9px 12px', fontSize: 13 }} type="number" min="0" value={item.price} onChange={e => updateItem(i, 'price', Number(e.target.value))} />
-                                <span style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
+                            <div key={i} className="inv-item-row">
+                                <input className="dark-input inv-desc" style={{ flex: 3, padding: '9px 12px', fontSize: 13 }} placeholder="Service description" value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} />
+                                <input className="dark-input inv-qty" style={{ width: 70, padding: '9px 10px', fontSize: 13, textAlign: 'center' }} type="number" min="1" value={item.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} />
+                                <input className="dark-input inv-price" style={{ width: 120, padding: '9px 12px', fontSize: 13 }} type="number" min="0" value={item.price} onChange={e => updateItem(i, 'price', Number(e.target.value))} />
+                                <span className="inv-total" style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
                                     ₹{(item.qty * item.price).toLocaleString('en-IN')}
                                 </span>
                                 <button onClick={() => removeItem(i)} style={{ width: 32, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
@@ -138,6 +138,7 @@ export default function InvoicesPage() {
 
             {/* Invoices list */}
             <div className="glass-card" style={{ padding: 24 }}>
+                <div className="table-scroll">
                 <table className="data-table">
                     <thead>
                         <tr>
@@ -211,13 +212,14 @@ export default function InvoicesPage() {
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
 
-            {/* Preview Modal */}
+            {/* Preview Modal */
             {preview && (
                 <div className="modal-overlay" onClick={() => setPreview(null)}>
                     <div
-                        className="glass-card animate-fade-in"
+                        className="glass-card animate-fade-in modal-inner"
                         style={{ width: '100%', maxWidth: 560, padding: 32, position: 'relative' }}
                         onClick={e => e.stopPropagation()}
                     >
