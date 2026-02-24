@@ -12,6 +12,7 @@ import {
     Settings,
     LogOut,
     Zap,
+    X,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '@/lib/appStore';
@@ -26,27 +27,27 @@ const navItems = [
     { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { logout } = useAppStore();
 
     return (
-        <aside
-            style={{
-                width: 240,
-                minHeight: '100vh',
-                background: 'rgba(255, 255, 255, 0.03)', // Slightly darker sidebar but still glass
-                borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '24px 16px',
-                position: 'sticky',
-                top: 0,
-                backdropFilter: 'blur(16px)',
-                flexShrink: 0,
-            }}
-        >
+        <aside className={clsx('sidebar', isOpen && 'sidebar--open')}>
+            {/* Close button — visible on mobile */}
+            <button
+                className="sidebar-close-btn"
+                onClick={onClose}
+                aria-label="Close menu"
+            >
+                <X size={20} />
+            </button>
+
             {/* Logo */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 36, paddingLeft: 6 }}>
                 <div
@@ -59,6 +60,7 @@ export default function Sidebar() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 0 18px rgba(59,130,246,0.5)',
+                        flexShrink: 0,
                     }}
                 >
                     <Zap size={18} color="white" />
@@ -81,6 +83,7 @@ export default function Sidebar() {
                             key={href}
                             href={href}
                             className={clsx('nav-link', active && 'active')}
+                            onClick={onClose}
                         >
                             <Icon size={17} />
                             {label}
@@ -97,6 +100,7 @@ export default function Sidebar() {
                     onClick={() => {
                         logout();
                         router.replace('/');
+                        onClose();
                     }}
                     style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
                 >

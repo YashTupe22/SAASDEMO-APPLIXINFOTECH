@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppStoreProvider } from "@/lib/appStore";
 
 export const metadata: Metadata = {
   title: "Applix Infotech — Business Dashboard",
   description: "Modern SaaS business management platform for Applix Infotech Services.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

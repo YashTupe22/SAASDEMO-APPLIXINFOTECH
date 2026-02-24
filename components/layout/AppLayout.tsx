@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { useAppStore } from '@/lib/appStore';
@@ -15,6 +15,10 @@ interface AppLayoutProps {
 export default function AppLayout({ children, title, subtitle }: AppLayoutProps) {
     const { ready, currentUser } = useAppStore();
     const router = useRouter();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+    const toggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
 
     useEffect(() => {
         if (!ready) return;
@@ -22,6 +26,11 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
             router.replace('/');
         }
     }, [ready, currentUser, router]);
+
+    // Close sidebar on route change (mobile UX)
+    useEffect(() => {
+        closeSidebar();
+    }, [closeSidebar]);
 
     if (!ready) {
         return (
@@ -34,17 +43,28 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
     if (!currentUser) return null;
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-            <Sidebar />
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <TopBar title={title} subtitle={subtitle} />
+        <div style={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
+            {/* Mobile overlay backdrop */}
+            {sidebarOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={closeSidebar}
+                    aria-hidden="true"
+                />
+            )}
+
+            <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+                <TopBar title={title} subtitle={subtitle} onMenuToggle={toggleSidebar} />
                 <main
                     style={{
                         flex: 1,
-                        padding: '28px',
+                        padding: '24px 20px',
                         overflowY: 'auto',
                         background: 'radial-gradient(ellipse at 20% 10%, rgba(59,130,246,0.07) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(6,182,212,0.05) 0%, transparent 60%), var(--navy)',
                     }}
+                    className="main-content"
                 >
                     {children}
                 </main>

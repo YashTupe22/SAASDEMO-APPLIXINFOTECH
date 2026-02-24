@@ -1,13 +1,14 @@
 'use client';
 
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 
 interface TopBarProps {
     title: string;
     subtitle?: string;
+    onMenuToggle: () => void;
 }
 
-export default function TopBar({ title, subtitle }: TopBarProps) {
+export default function TopBar({ title, subtitle, onMenuToggle }: TopBarProps) {
     return (
         <header
             style={{
@@ -18,22 +19,35 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '0 28px',
+                padding: '0 20px',
                 position: 'sticky',
                 top: 0,
                 zIndex: 30,
+                gap: 12,
             }}
         >
-            {/* Left: title */}
-            <div>
-                <h1 style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>{title}</h1>
-                {subtitle && <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{subtitle}</p>}
+            {/* Left: hamburger + title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                {/* Hamburger — shown on mobile */}
+                <button
+                    className="menu-toggle-btn"
+                    onClick={onMenuToggle}
+                    aria-label="Toggle menu"
+                >
+                    <Menu size={20} />
+                </button>
+
+                <div style={{ minWidth: 0 }}>
+                    <h1 style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</h1>
+                    {subtitle && <p style={{ fontSize: 12, color: '#64748b', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</p>}
+                </div>
             </div>
 
             {/* Right: search + notif + avatar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {/* Search bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                {/* Search bar — hidden on small mobile */}
                 <div
+                    className="topbar-search"
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -53,7 +67,7 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
                             outline: 'none',
                             color: '#f1f5f9',
                             fontSize: 13,
-                            width: 140,
+                            width: 120,
                         }}
                     />
                 </div>
@@ -72,6 +86,7 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
                         cursor: 'pointer',
                         position: 'relative',
                         color: '#94a3b8',
+                        flexShrink: 0,
                     }}
                 >
                     <Bell size={16} />
@@ -104,6 +119,7 @@ export default function TopBar({ title, subtitle }: TopBarProps) {
                         color: 'white',
                         cursor: 'pointer',
                         boxShadow: '0 0 12px rgba(59,130,246,0.3)',
+                        flexShrink: 0,
                     }}
                 >
                     AI
