@@ -59,6 +59,7 @@ create table public.invoices (
 create table public.invoice_items (
   id          uuid default uuid_generate_v4() primary key,
   invoice_id  uuid references public.invoices(id) on delete cascade not null,
+  user_id     uuid references auth.users(id) on delete cascade not null,
   description text not null,
   qty         integer not null default 1,
   price       numeric not null default 0
@@ -125,15 +126,11 @@ create policy "own invoices insert" on public.invoices for insert with check (au
 create policy "own invoices update" on public.invoices for update using (auth.uid() = user_id);
 create policy "own invoices delete" on public.invoices for delete using (auth.uid() = user_id);
 
--- Invoice Items (via invoice ownership)
-create policy "own invoice_items select" on public.invoice_items for select
-  using (exists (select 1 from public.invoices where id = invoice_id and user_id = auth.uid()));
-create policy "own invoice_items insert" on public.invoice_items for insert
-  with check (exists (select 1 from public.invoices where id = invoice_id and user_id = auth.uid()));
-create policy "own invoice_items update" on public.invoice_items for update
-  using (exists (select 1 from public.invoices where id = invoice_id and user_id = auth.uid()));
-create policy "own invoice_items delete" on public.invoice_items for delete
-  using (exists (select 1 from public.invoices where id = invoice_id and user_id = auth.uid()));
+-- Invoice Items (direct user_id — avoids INSERT race condition)
+create policy "own invoice_items select" on public.invoice_items for select using (auth.uid() = user_id);
+create policy "own invoice_items insert" on public.invoice_items for insert with check (auth.uid() = user_id);
+create policy "own invoice_items update" on public.invoice_items for update using (auth.uid() = user_id);
+create policy "own invoice_items delete" on public.invoice_items for delete using (auth.uid() = user_id);
 
 -- Transactions
 create policy "own transactions select" on public.transactions for select using (auth.uid() = user_id);
