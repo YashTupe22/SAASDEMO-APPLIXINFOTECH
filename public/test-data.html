@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Data Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #1f2937; margin: 0 0 10px; }
+        h2 { color: #4b5563; font-size: 18px; margin: 20px 0 10px; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            font-weight: 500;
+        }
+        button:hover { background: #2563eb; }
+        button.secondary { background: #6b7280; }
+        button.secondary:hover { background: #4b5563; }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .warning { background: #fef3c7; color: #92400e; }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-top: 10px;
+            color: #374151;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 Supabase Data Diagnostic</h1>
+        <p style="color: #6b7280;">Test authentication and database operations</p>
+    </div>
+
+    <div class="card">
+        <h2>1️⃣ Connection Status</h2>
+        <button onclick="checkConnection()">Check Connection</button>
+        <div id="connectionStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>2️⃣ Authentication</h2>
+        <div id="authStatus" class="status info">Not checked yet</div>
+        
+        <div style="margin-top: 20px;">
+            <h3 style="font-size: 16px;">Sign Up Test User</h3>
+            <label>Email:</label>
+            <input type="email" id="signupEmail" placeholder="test@example.com" value="test@example.com">
+            <label>Password:</label>
+            <input type="password" id="signupPassword" placeholder="password123" value="password123">
+            <label>Name:</label>
+            <input type="text" id="signupName" placeholder="Test User" value="Test User">
+            <button onclick="testSignup()">Sign Up</button>
+            <button onclick="testLogin()" class="secondary">Login</button>
+            <button onclick="checkAuth()" class="secondary">Check Auth Status</button>
+        </div>
+
+        <div id="authResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>3️⃣ Database Operations</h2>
+        <button onclick="testInsert()">Test Insert Transaction</button>
+        <button onclick="testSelect()" class="secondary">View All Tables</button>
+        <div id="dbResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>4️⃣ Console Logs</h2>
+        <pre id="logs">Logs will appear here...</pre>
+        <button onclick="clearLogs()" class="secondary">Clear Logs</button>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://nljtrilrephwybtakaxc.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sanRyaWxyZXBod3lidGFrYXhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODc4MTIsImV4cCI6MjA4NzQ2MzgxMn0.vp9qDqZthqDASf8lNTP0ftlab8qbyEXHHE9E0BqGXD4';
+
+        window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        const logs = [];
+        const log = (msg, type = 'info') => {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMsg = `[${timestamp}] ${type.toUpperCase()}: ${msg}`;
+            logs.push(logMsg);
+            document.getElementById('logs').textContent = logs.join('\n');
+            console.log(logMsg);
+        };
+
+        window.clearLogs = () => {
+            logs.length = 0;
+            document.getElementById('logs').textContent = 'Logs cleared.';
+        };
+
+        window.checkConnection = async () => {
+            const el = document.getElementById('connectionStatus');
+            el.innerHTML = '<div class="status info">Checking...</div>';
+            log('Checking connection...');
+            
+            try {
+                const { data, error } = await window.supabase.from('profiles').select('count');
+                if (error) {
+                    el.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+                    log(`Connection error: ${error.message}`, 'error');
+                } else {
+                    el.innerHTML = '<div class="status success">✅ Connected successfully!</div>';
+                    log('Connection successful');
+                }
+            } catch (err) {
+                el.innerHTML = `<div class="status error">❌ Network Error: ${err.message}</div>`;
+                log(`Network error: ${err.message}`, 'error');
+            }
+        };
+
+        window.checkAuth = async () => {
+            const el = document.getElementById('authStatus');
+            log('Checking auth status...');
+            
+            const { data: { session }, error } = await window.supabase.auth.getSession();
+            
+            if (error) {
+                el.innerHTML = `<div class="status error">❌ Auth Error: ${error.message}</div>`;
+                log(`Auth error: ${error.message}`, 'error');
+            } else if (session) {
+                el.innerHTML = `<div class="status success">✅ Logged in as: ${session.user.email}<br>User ID: ${session.user.id}</div>`;
+                log(`User logged in: ${session.user.email} (${session.user.id})`);
+            } else {
+                el.innerHTML = '<div class="status warning">⚠️ No active session - you need to sign up or login first</div>';
+                log('No active session', 'warning');
+            }
+        };
+
+        window.testSignup = async () => {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const name = document.getElementById('signupName').value;
+            const el = document.getElementById('authResult');
+            
+            el.innerHTML = '<div class="status info">Creating account...</div>';
+            log(`Attempting signup: ${email}`);
+            
+            const { data, error } = await window.supabase.auth.signUp({
+                email,
+                password,
+                options: { data: { name } }
+            });
+            
+            if (error) {
+                el.innerHTML = `<div class="status error">❌ Signup failed: ${error.message}</div>`;
+                log(`Signup error: ${error.message}`, 'error');
+            } else {
+                el.innerHTML = `<div class="status success">✅ Account created! User ID: ${data.user?.id}</div>`;
+                log(`Signup successful: ${data.user?.email} (${data.user?.id})`);
+                setTimeout(checkAuth, 500);
+            }
+        };
+
+        window.testLogin = async () => {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const el = document.getElementById('authResult');
+            
+            el.innerHTML = '<div class="status info">Logging in...</div>';
+            log(`Attempting login: ${email}`);
+            
+            const { data, error } = await window.supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+            
+            if (error) {
+                el.innerHTML = `<div class="status error">❌ Login failed: ${error.message}</div>`;
+                log(`Login error: ${error.message}`, 'error');
+            } else {
+                el.innerHTML = `<div class="status success">✅ Logged in as ${data.user?.email}</div>`;
+                log(`Login successful: ${data.user?.email}`);
+                setTimeout(checkAuth, 500);
+            }
+        };
+
+        window.testInsert = async () => {
+            const el = document.getElementById('dbResult');
+            log('Testing transaction insert...');
+            
+            // Check auth first
+            const { data: { session } } = await window.supabase.auth.getSession();
+            if (!session) {
+                el.innerHTML = '<div class="status error">❌ You must be logged in to insert data. Sign up or login first!</div>';
+                log('Insert failed: not logged in', 'error');
+                return;
+            }
+            
+            el.innerHTML = '<div class="status info">Inserting test transaction...</div>';
+            
+            const testData = {
+                user_id: session.user.id,
+                type: 'Income',
+                category: 'Test Category',
+                amount: 100.50,
+                date: new Date().toISOString().split('T')[0],
+                note: 'Test transaction from diagnostic tool'
+            };
+            
+            log(`Inserting: ${JSON.stringify(testData)}`);
+            
+            const { data, error } = await window.supabase
+                .from('transactions')
+                .insert(testData)
+                .select();
+            
+            if (error) {
+                el.innerHTML = `<div class="status error">❌ Insert failed: ${error.message}<br><br>Details: ${JSON.stringify(error, null, 2)}</div>`;
+                log(`Insert error: ${error.message} - ${JSON.stringify(error.details)}`, 'error');
+            } else {
+                el.innerHTML = `<div class="status success">✅ Transaction inserted successfully!<br><br><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                log(`Insert successful: ${JSON.stringify(data)}`);
+            }
+        };
+
+        window.testSelect = async () => {
+            const el = document.getElementById('dbResult');
+            log('Querying all tables...');
+            
+            el.innerHTML = '<div class="status info">Loading data from all tables...</div>';
+            
+            const tables = ['profiles', 'employees', 'transactions', 'invoices', 'inventory', 'attendance'];
+            let output = '<div class="status success">📊 Table Data:</div>';
+            
+            for (const table of tables) {
+                const { data, error, count } = await window.supabase
+                    .from(table)
+                    .select('*', { count: 'exact' });
+                
+                if (error) {
+                    output += `<h3 style="color: #ef4444;">${table}: Error</h3><pre>${error.message}</pre>`;
+                    log(`${table}: ${error.message}`, 'error');
+                } else {
+                    output += `<h3 style="color: #3b82f6;">${table} (${count || 0} rows)</h3>`;
+                    if (data && data.length > 0) {
+                        output += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                        log(`${table}: ${count} rows found`);
+                    } else {
+                        output += '<p style="color: #6b7280;">No data</p>';
+                        log(`${table}: empty`);
+                    }
+                }
+            }
+            
+            el.innerHTML = output;
+        };
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            checkConnection();
+            checkAuth();
+        });
+    </script>
+</body>
+</html>

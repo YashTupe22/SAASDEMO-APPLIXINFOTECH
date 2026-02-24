@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Browser Storage - Fix Lock Errors</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        h1 {
+            margin: 0 0 10px;
+            color: #667eea;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin: 10px 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .success {
+            background: #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: none;
+        }
+        .warning {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .info {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔧 Fix Lock Timeout Errors</h1>
+        <p class="subtitle">Clear browser storage to resolve authentication lock issues</p>
+        
+        <div class="warning">
+            <strong>⚠️ Warning:</strong> This will log you out and clear all local data. Make sure your data is saved to Supabase first!
+        </div>
+
+        <div class="info">
+            <strong>When to use this:</strong><br>
+            • Getting "LockManager lock timed out" errors<br>
+            • App stuck on loading screen<br>
+            • Authentication issues<br>
+            • Data not saving properly
+        </div>
+
+        <button onclick="clearAndReload()">
+            🗑️ Clear Storage & Reload
+        </button>
+
+        <button onclick="checkStorage()" style="background: #6b7280;">
+            📊 Check Current Storage
+        </button>
+
+        <div id="success" class="success">
+            ✅ Storage cleared successfully! Redirecting to home page...
+        </div>
+
+        <div id="storageInfo" style="margin-top: 20px; font-size: 14px; color: #666;"></div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>💡 Prevention Tips:</strong><br>
+            • Don't open the app in multiple tabs<br>
+            • Clear your browser cache regularly<br>
+            • Use incognito mode for testing
+        </div>
+    </div>
+
+    <script>
+        function clearAndReload() {
+            try {
+                // Clear all storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear IndexedDB
+                if (window.indexedDB) {
+                    indexedDB.databases().then(databases => {
+                        databases.forEach(db => {
+                            if (db.name && db.name.includes('supabase')) {
+                                indexedDB.deleteDatabase(db.name);
+                            }
+                        });
+                    });
+                }
+
+                // Show success message
+                document.getElementById('success').style.display = 'block';
+                
+                // Redirect to home after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } catch (err) {
+                alert('Error clearing storage: ' + err.message);
+            }
+        }
+
+        function checkStorage() {
+            const info = document.getElementById('storageInfo');
+            let html = '<strong>Current Storage:</strong><br><br>';
+            
+            // Check localStorage
+            html += `<strong>LocalStorage:</strong> ${localStorage.length} items<br>`;
+            if (localStorage.length > 0) {
+                html += '<ul style="margin: 5px 0; padding-left: 20px;">';
+                for (let i = 0; i < Math.min(localStorage.length, 5); i++) {
+                    const key = localStorage.key(i);
+                    html += `<li><code>${key}</code></li>`;
+                }
+                if (localStorage.length > 5) {
+                    html += `<li>... and ${localStorage.length - 5} more</li>`;
+                }
+                html += '</ul>';
+            }
+            
+            // Check sessionStorage
+            html += `<br><strong>SessionStorage:</strong> ${sessionStorage.length} items<br>`;
+            
+            // Check cookies
+            const cookies = document.cookie.split(';').length;
+            html += `<br><strong>Cookies:</strong> ${cookies} items`;
+            
+            info.innerHTML = html;
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', checkStorage);
+    </script>
+</body>
+</html>

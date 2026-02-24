@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { supabase } from '@/lib/supabase';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAppStore } from '@/lib/appStore';
 import { Mail, MessageCircle, Phone } from 'lucide-react';
 
@@ -22,20 +23,21 @@ export default function SupportPage() {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from('support_requests').insert({
-      name: name.trim(),
-      email: email.trim(),
-      message: message.trim(),
-      user_id: currentUser?.id ?? null,
-    });
-    setSubmitting(false);
-    if (error) {
-      setStatus('Could not send message. Please try again.');
-      console.error('support_requests', error.message, error.details);
-    } else {
+    try {
+      await addDoc(collection(db, 'support_requests'), {
+        name: name.trim(),
+        email: email.trim(),
+        message: message.trim(),
+        userId: currentUser?.id ?? null,
+        createdAt: new Date().toISOString(),
+      });
       setStatus('Thanks! We will get back to you soon.');
       setMessage('');
+    } catch (err) {
+      setStatus('Could not send message. Please try again.');
+      console.error('support_requests', err);
     }
+    setSubmitting(false);
   };
 
   return (
@@ -46,7 +48,7 @@ export default function SupportPage() {
             Have a question about invoices, GST, or your data?
           </p>
           <p style={{ fontSize: 13, color: '#64748b' }}>
-            Send us a quick note and we’ll respond over email. For demo purposes this stores your request in Supabase.
+            Send us a quick note and we'll respond over email. Your request is stored securely in Firebase.
           </p>
         </div>
 

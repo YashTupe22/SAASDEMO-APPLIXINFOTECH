@@ -1,24 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project for business management (employees, invoices, inventory, transactions) with Supabase backend.
+
+## ⚠️ IMPORTANT: Backend Setup Required
+
+**Your data won't persist until you set up Supabase!**
+
+👉 **Follow the setup guide: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)**
+
+The main step is running the SQL schema in your Supabase dashboard (takes 2 minutes).
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+```
+
+Then run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001](http://localhost:3001) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `app/` - Next.js pages and routes
+  - `dashboard/` - Overview with charts
+  - `attendance/` - Employee attendance
+  - `invoices/` - Invoice management
+  - `expenses/` - Transaction tracking
+  - `inventory/` - Stock management
+  - `settings/` - User preferences
+- `components/` - Reusable UI components
+- `lib/` - Core logic
+  - `appStore.tsx` - State management & Supabase integration
+  - `supabase.ts` - Supabase client
+- `supabase/schema.sql` - Database schema
+
+## Features
+
+✅ User authentication  
+✅ Employee management & attendance tracking  
+✅ Invoice generation with PDF export  
+✅ Income/Expense transactions  
+✅ Inventory management  
+✅ Dashboard with charts  
+✅ Dark/Light theme  
+✅ Excel export
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Database:** Supabase (PostgreSQL)
+- **Styling:** Tailwind CSS
+- **Charts:** Recharts
+- **Icons:** Lucide React
 
 ## Learn More
 

@@ -4,8 +4,20 @@ import React, {
   createContext, useContext, useEffect,
   useMemo, useState, useRef, useCallback,
 } from 'react';
-import { supabase } from './supabase';
-import type { Session } from '@supabase/supabase-js';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile,
+  type User as FirebaseUser,
+} from 'firebase/auth';
+import {
+  doc, getDoc, setDoc, updateDoc,
+  collection, getDocs, deleteDoc,
+  writeBatch, query, orderBy,
+} from 'firebase/firestore';
+import { auth, db } from './firebase';
 import type { Employee, InventoryItem, Invoice, InvoiceItem, Transaction } from './mockData';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -50,7 +62,7 @@ export interface UserAccount {
 
 interface AppStoreContextValue {
   ready: boolean;
-  session: Session | null;
+  session: FirebaseUser | null;
   profile: Profile | null;
   currentUser: UserAccount | null;
   data: {
@@ -87,87 +99,83 @@ interface AppStoreContextValue {
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
 
+// ─── Firestore helpers ────────────────────────────────────────────────────────
+
+const userCol = (uid: string, col: string) => collection(db, 'users', uid, col);
+const userDoc = (uid: string)               => doc(db, 'users', uid);
+
 // ─── Load all data for a user ─────────────────────────────────────────────────
 
 async function loadUserData(userId: string) {
-  const [
-    { data: profileRow },
-    { data: empRows },
-    { data: attRows },
-    { data: invRows },
-    { data: itemRows },
-    { data: txRows },
-    { data: invtRows },
-  ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('employees').select('*').eq('user_id', userId).order('created_at'),
-    supabase.from('attendance').select('*').eq('user_id', userId),
-    supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-    supabase.from('invoice_items').select('*').eq('user_id', userId),
-    supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
-    supabase.from('inventory').select('*').eq('user_id', userId).order('created_at'),
+  const [profileSnap, empSnaps, invSnaps, txSnaps, invtSnaps] = await Promise.all([
+    getDoc(userDoc(userId)),
+    getDocs(query(userCol(userId, 'employees'), orderBy('createdAt'))),
+    getDocs(query(userCol(userId, 'invoices'),  orderBy('createdAt', 'desc'))),
+    getDocs(query(userCol(userId, 'transactions'), orderBy('date', 'desc'))),
+    getDocs(query(userCol(userId, 'inventory'),  orderBy('createdAt'))),
   ]);
 
-  // Employees with merged attendance
-  const employees: Employee[] = (empRows || []).map(e => {
-    const attendance: Record<string, 'present' | 'absent'> = {};
-    (attRows || []).filter(a => a.employee_id === e.id).forEach(a => {
-      attendance[a.date] = a.status;
-    });
-    return { id: e.id, name: e.name, role: e.role, avatar: e.avatar, attendance };
+  const employees: Employee[] = empSnaps.docs.map(d => {
+    const e = d.data();
+    return { id: d.id, name: e.name, role: e.role, avatar: e.avatar, attendance: e.attendance ?? {} };
   });
 
-  // Invoices with merged items
-  const invoices: Invoice[] = (invRows || []).map(inv => ({
-    id: inv.id,
-    invoiceNo: inv.invoice_no,
-    client: inv.client,
-    date: inv.date,
-    dueDate: inv.due_date,
-    status: inv.status as 'Paid' | 'Pending',
-    items: (itemRows || []).filter(i => i.invoice_id === inv.id).map(i => ({
-      description: i.description,
-      qty: Number(i.qty),
-      price: Number(i.price),
-    })),
-  }));
+  const invoices: Invoice[] = invSnaps.docs.map(d => {
+    const inv = d.data();
+    return {
+      id: d.id,
+      invoiceNo: inv.invoiceNo,
+      client: inv.client,
+      date: inv.date,
+      dueDate: inv.dueDate,
+      status: inv.status as 'Paid' | 'Pending',
+      items: (inv.items ?? []) as InvoiceItem[],
+    };
+  });
 
-  const transactions: Transaction[] = (txRows || []).map(tx => ({
-    id: tx.id,
-    type: tx.type as 'Income' | 'Expense',
-    category: tx.category,
-    amount: Number(tx.amount),
-    date: tx.date,
-    note: tx.note || '',
-  }));
+  const transactions: Transaction[] = txSnaps.docs.map(d => {
+    const tx = d.data();
+    return {
+      id: d.id,
+      type: tx.type as 'Income' | 'Expense',
+      category: tx.category,
+      amount: Number(tx.amount),
+      date: tx.date,
+      note: tx.note || '',
+    };
+  });
 
-  const inventory: InventoryItem[] = (invtRows || []).map(i => ({
-    id: i.id,
-    name: i.name,
-    sku: i.sku || '',
-    category: i.category || 'General',
-    unit: i.unit || 'Units',
-    openingQty: Number(i.opening_qty),
-    currentQty: Number(i.current_qty),
-    purchasePrice: Number(i.purchase_price),
-    sellingPrice: Number(i.selling_price),
-    reorderLevel: Number(i.reorder_level),
-    gstRate: Number(i.gst_rate),
-  }));
+  const inventory: InventoryItem[] = invtSnaps.docs.map(d => {
+    const i = d.data();
+    return {
+      id: d.id,
+      name: i.name,
+      sku: i.sku || '',
+      category: i.category || 'General',
+      unit: i.unit || 'Units',
+      openingQty: Number(i.openingQty),
+      currentQty: Number(i.currentQty),
+      purchasePrice: Number(i.purchasePrice),
+      sellingPrice: Number(i.sellingPrice),
+      reorderLevel: Number(i.reorderLevel),
+      gstRate: Number(i.gstRate),
+    };
+  });
 
-  const profile: Profile | null = profileRow ? {
-    id: profileRow.id,
-    name: profileRow.name || '',
-    businessName: profileRow.business_name || '',
-    email: profileRow.email || '',
-    phone: profileRow.phone || '',
-    gst: profileRow.gst || '',
-    address: profileRow.address || '',
-    currency: profileRow.currency || 'INR',
-    emailNotifications: profileRow.email_notifications ?? true,
-    darkMode: profileRow.dark_mode ?? true,
-    twoFactorAuth: profileRow.two_factor_auth ?? false,
-    onboardingComplete: profileRow.onboarding_complete ?? false,
+  const profileData = profileSnap.data();
+  const profile: Profile | null = profileData ? {
+    id: userId,
+    name: profileData.name || '',
+    businessName: profileData.businessName || '',
+    email: profileData.email || '',
+    phone: profileData.phone || '',
+    gst: profileData.gst || '',
+    address: profileData.address || '',
+    currency: profileData.currency || 'INR',
+    emailNotifications: profileData.emailNotifications ?? true,
+    darkMode: profileData.darkMode ?? true,
+    twoFactorAuth: profileData.twoFactorAuth ?? false,
+    onboardingComplete: profileData.onboardingComplete ?? false,
   } : null;
 
   return { employees, invoices, transactions, inventory, profile };
@@ -216,7 +224,7 @@ function computeDashboard(invoices: Invoice[], transactions: Transaction[]) {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AppStoreProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -248,43 +256,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setInventory([]); invtRef.current = [];
   }, []);
 
-  // Belt-and-suspenders auth initialisation:
-  // 1. getSession()       — resolves immediately from localStorage (works offline/placeholder)
-  // 2. onAuthStateChange  — handles SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED going forward
-  // 3. 5-second timeout   — absolute safety net so ready is NEVER stuck false
+  // Firebase auth listener — fires immediately with cached user (no network needed)
   useEffect(() => {
     let readySet = false;
     const markReady = () => { if (!readySet) { readySet = true; setReady(true); } };
 
-    // 1. Immediate: read cached session from localStorage
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      if (s?.user) {
-        uidRef.current = s.user.id;
-        setSession(s);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setSession(user);
+      if (user) {
+        uidRef.current = user.uid;
         markReady();
-        await refresh(s.user.id);
-      } else {
-        markReady();
-      }
-    }).catch(markReady); // even if Supabase URL is wrong, set ready
-
-    // 2. Ongoing: handle sign-in / sign-out / token refresh events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      setSession(s);
-      if (s?.user) {
-        uidRef.current = s.user.id;
-        markReady();
-        await refresh(s.user.id);
+        await refresh(user.uid);
       } else {
         clearData();
         markReady();
       }
     });
 
-    // 3. Safety net: never leave the user on a blank loading screen
+    // Safety net: never leave the user on a blank loading screen
     const timeout = setTimeout(markReady, 5000);
 
-    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
+    return () => { unsubscribe(); clearTimeout(timeout); };
   }, [refresh, clearData]);
 
   // Theme hydration: prefer localStorage, then profile.darkMode
@@ -305,23 +297,44 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   const login = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { ok: true };
+    } catch (e: any) {
+      const msg: string = e?.message ?? 'Login failed.';
+      return { ok: false, error: msg.replace('Firebase: ', '').replace(/ \(auth\/.*\)\.?/, '') };
+    }
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email, password, options: { data: { name } },
-    });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+      // Create the profile document in Firestore
+      await setDoc(userDoc(cred.user.uid), {
+        name,
+        email,
+        businessName: '',
+        phone: '',
+        gst: '',
+        address: '',
+        currency: 'INR',
+        emailNotifications: true,
+        darkMode: true,
+        twoFactorAuth: false,
+        onboardingComplete: false,
+      });
+      return { ok: true };
+    } catch (e: any) {
+      const msg: string = e?.message ?? 'Signup failed.';
+      return { ok: false, error: msg.replace('Firebase: ', '').replace(/ \(auth\/.*\)\.?/, '') };
+    }
   }, []);
 
   const loginDemo = useCallback(() => { }, []);
 
   const logout = useCallback(() => {
-    supabase.auth.signOut().catch(err => console.error('signOut:', err));
+    firebaseSignOut(auth).catch(err => console.error('signOut:', err));
   }, []);
 
   // ── Onboarding ────────────────────────────────────────────────────────────
@@ -331,77 +344,50 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }) => {
     const uid = uidRef.current;
     if (!uid) return;
-    await supabase.from('profiles').update({
-      business_name: info.businessName,
+    await updateDoc(userDoc(uid), {
+      businessName: info.businessName,
       phone: info.phone,
       gst: info.gst,
       address: info.address,
-      onboarding_complete: true,
-    }).eq('id', uid);
+      onboardingComplete: true,
+    });
     setProfile(prev => prev ? { ...prev, ...info, onboardingComplete: true } : prev);
   }, []);
 
-  // ── FIX #2 & #3: addTransaction ─────────────────────────────────────────
+  // ── addTransaction ────────────────────────────────────────────────────────
 
   const addTransaction = useCallback((input: AddTransactionInput) => {
     const uid = uidRef.current;
     if (!uid) return;
-    const id = 't-' + Date.now().toString(36);
+    const id = crypto.randomUUID();
     const tx: Transaction = { id, ...input };
     setTransactions(prev => [tx, ...prev]);
-    supabase.from('transactions')
-      .insert({ id, user_id: uid, type: input.type, category: input.category, amount: input.amount, date: input.date, note: input.note })
-      .then(({ error }) => { if (error) console.error('addTransaction:', error.message, error.details); });
+    setDoc(doc(userCol(uid, 'transactions'), id), {
+      type: input.type, category: input.category,
+      amount: input.amount, date: input.date, note: input.note,
+    }).catch(err => console.error('addTransaction:', err));
   }, []);
 
-  // ── FIX #3: addInvoice — use ref for count, await invoice before items ───
+  // ── addInvoice ────────────────────────────────────────────────────────────
 
   const addInvoice = useCallback((input: AddInvoiceInput) => {
     const uid = uidRef.current;
     if (!uid) return;
-
-    const id = 'inv-' + Date.now().toString(36);
-    // FIX: use ref (not stale state closure) for invoice count
+    const id = crypto.randomUUID();
     const invoiceNo = `INV-${String(invoiceCountRef.current + 1).padStart(3, '0')}`;
     invoiceCountRef.current += 1;
-
     const invoice: Invoice = {
-      id,
-      invoiceNo,
-      client: input.client,
-      date: input.date,
-      dueDate: input.dueDate || input.date,
-      items: input.items,
-      status: 'Pending',
+      id, invoiceNo, client: input.client,
+      date: input.date, dueDate: input.dueDate || input.date,
+      items: input.items, status: 'Pending',
     };
     setInvoices(prev => [invoice, ...prev]);
-
-    // FIX: await invoice row before inserting items, pass user_id on items
-    (async () => {
-      const { error: invErr } = await supabase.from('invoices').insert({
-        id,
-        user_id: uid,
-        invoice_no: invoiceNo,
-        client: input.client,
-        date: input.date,
-        due_date: input.dueDate || input.date,
-        status: 'Pending',
-      });
-      if (invErr) { console.error('addInvoice header:', invErr.message, invErr.details); return; }
-
-      if (input.items.length > 0) {
-        const { error: itemErr } = await supabase.from('invoice_items').insert(
-          input.items.map(i => ({
-            invoice_id: id,
-            user_id: uid,           // FIX: include user_id so RLS is satisfied
-            description: i.description,
-            qty: i.qty,
-            price: i.price,
-          }))
-        );
-        if (itemErr) console.error('addInvoice items:', itemErr.message, itemErr.details);
-      }
-    })();
+    setDoc(doc(userCol(uid, 'invoices'), id), {
+      invoiceNo, client: input.client,
+      date: input.date, dueDate: input.dueDate || input.date,
+      status: 'Pending', items: input.items,
+      createdAt: new Date().toISOString(),
+    }).catch(err => console.error('addInvoice:', err));
   }, []);
 
   // ── toggleInvoiceStatus ───────────────────────────────────────────────────
@@ -409,37 +395,32 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const toggleInvoiceStatus = useCallback((id: string) => {
     const uid = uidRef.current;
     if (!uid) return;
-
     setInvoices(prev => {
       const target = prev.find(i => i.id === id);
       if (!target) return prev;
       const isPaid = target.status === 'Paid';
       const nextStatus: Invoice['status'] = isPaid ? 'Pending' : 'Paid';
-
-      supabase.from('invoices').update({ status: nextStatus }).eq('id', id)
-        .then(({ error }) => { if (error) console.error('toggleInvoice:', error.message); });
-
+      updateDoc(doc(userCol(uid, 'invoices'), id), { status: nextStatus })
+        .catch(err => console.error('toggleInvoice:', err));
       if (!isPaid) {
         const total = target.items.reduce((s, i) => s + i.qty * i.price, 0);
-        const txId = 't-pay-' + Date.now().toString(36);
+        const txId = crypto.randomUUID();
         const tx: Transaction = {
-          id: txId,
-          type: 'Income',
-          category: 'Client Payment',
-          amount: total,
+          id: txId, type: 'Income', category: 'Client Payment', amount: total,
           date: new Date().toISOString().split('T')[0],
           note: `${target.invoiceNo} — ${target.client}`,
         };
         setTransactions(p => [tx, ...p]);
-        supabase.from('transactions').insert({ id: txId, user_id: uid, type: 'Income', category: 'Client Payment', amount: total, date: tx.date, note: tx.note })
-          .then(({ error }) => { if (error) console.error('toggleInvoice tx:', error.message); });
+        setDoc(doc(userCol(uid, 'transactions'), txId), {
+          type: 'Income', category: 'Client Payment', amount: total,
+          date: tx.date, note: tx.note,
+        }).catch(err => console.error('toggleInvoice tx:', err));
       }
-
       return prev.map(i => i.id === id ? { ...i, status: nextStatus } : i);
     });
   }, []);
 
-  // ── updateEmployees (diff-sync) ───────────────────────────────────────────
+  // ── updateEmployees (diff-sync with embedded attendance) ─────────────────
 
   const updateEmployees = useCallback((updater: (prev: Employee[]) => Employee[]) => {
     const uid = uidRef.current;
@@ -448,26 +429,22 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     empRef.current = next;
     setEmployees(next);
     if (!uid) return;
-
     const prevIds = new Set(prev.map(e => e.id));
-    // New employees
     for (const emp of next) {
       if (!prevIds.has(emp.id)) {
-        supabase.from('employees').insert({ id: emp.id, user_id: uid, name: emp.name, role: emp.role, avatar: emp.avatar })
-          .then(({ error }) => { if (error) console.error('insertEmployee:', error.message); });
+        // New employee
+        setDoc(doc(userCol(uid, 'employees'), emp.id), {
+          name: emp.name, role: emp.role, avatar: emp.avatar,
+          attendance: emp.attendance ?? {}, createdAt: new Date().toISOString(),
+        }).catch(err => console.error('insertEmployee:', err));
+      } else {
+        // Check if attendance changed
+        const old = prev.find(e => e.id === emp.id);
+        if (old && JSON.stringify(old.attendance) !== JSON.stringify(emp.attendance)) {
+          updateDoc(doc(userCol(uid, 'employees'), emp.id), { attendance: emp.attendance })
+            .catch(err => console.error('updateAttendance:', err));
+        }
       }
-    }
-    // Attendance diffs
-    const prevMap = new Map(prev.map(e => [e.id, e]));
-    for (const emp of next) {
-      const old = prevMap.get(emp.id);
-      if (!old) continue;
-      const changed = Object.entries(emp.attendance || {}).filter(([d, s]) => old.attendance?.[d] !== s);
-      if (changed.length === 0) continue;
-      supabase.from('attendance').upsert(
-        changed.map(([date, status]) => ({ employee_id: emp.id, user_id: uid, date, status })),
-        { onConflict: 'employee_id,date' }
-      ).then(({ error }) => { if (error) console.error('upsertAttendance:', error.message); });
     }
   }, []);
 
@@ -480,35 +457,41 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     invtRef.current = next;
     setInventory(next);
     if (!uid) return;
-
     const prevIds = new Set(prev.map(i => i.id));
     for (const item of next) {
       if (!prevIds.has(item.id)) {
-        supabase.from('inventory').insert({ id: item.id, user_id: uid, name: item.name, sku: item.sku, category: item.category, unit: item.unit, opening_qty: item.openingQty, current_qty: item.currentQty, purchase_price: item.purchasePrice, selling_price: item.sellingPrice, reorder_level: item.reorderLevel, gst_rate: item.gstRate })
-          .then(({ error }) => { if (error) console.error('insertInventory:', error.message); });
+        setDoc(doc(userCol(uid, 'inventory'), item.id), {
+          name: item.name, sku: item.sku, category: item.category, unit: item.unit,
+          openingQty: item.openingQty, currentQty: item.currentQty,
+          purchasePrice: item.purchasePrice, sellingPrice: item.sellingPrice,
+          reorderLevel: item.reorderLevel, gstRate: item.gstRate,
+          createdAt: new Date().toISOString(),
+        }).catch(err => console.error('insertInventory:', err));
       } else {
-        supabase.from('inventory').update({ current_qty: item.currentQty, selling_price: item.sellingPrice, reorder_level: item.reorderLevel }).eq('id', item.id)
-          .then(({ error }) => { if (error) console.error('updateInventory:', error.message); });
+        updateDoc(doc(userCol(uid, 'inventory'), item.id), {
+          currentQty: item.currentQty, sellingPrice: item.sellingPrice,
+          reorderLevel: item.reorderLevel,
+        }).catch(err => console.error('updateInventory:', err));
       }
     }
   }, []);
 
-  // ── Profile / preferences ─────────────────────────────────────────────────
+  // ── Profile / Preferences ─────────────────────────────────────────────────
 
   const updateBusinessProfile = useCallback((p: { businessName: string; email: string; phone: string; gst: string; address: string }) => {
     const uid = uidRef.current;
     if (!uid) return;
     setProfile(prev => prev ? { ...prev, ...p } : prev);
-    supabase.from('profiles').update({ business_name: p.businessName, email: p.email, phone: p.phone, gst: p.gst, address: p.address }).eq('id', uid)
-      .then(({ error }) => { if (error) console.error('updateBusinessProfile:', error.message); });
+    updateDoc(userDoc(uid), { businessName: p.businessName, email: p.email, phone: p.phone, gst: p.gst, address: p.address })
+      .catch(err => console.error('updateBusinessProfile:', err));
   }, []);
 
   const updatePreferences = useCallback((p: { emailNotifications: boolean; darkMode: boolean; currency: string; twoFactorAuth: boolean }) => {
     const uid = uidRef.current;
     if (!uid) return;
     setProfile(prev => prev ? { ...prev, emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth } : prev);
-    supabase.from('profiles').update({ email_notifications: p.emailNotifications, dark_mode: p.darkMode, currency: p.currency, two_factor_auth: p.twoFactorAuth }).eq('id', uid)
-      .then(({ error }) => { if (error) console.error('updatePreferences:', error.message); });
+    updateDoc(userDoc(uid), { emailNotifications: p.emailNotifications, darkMode: p.darkMode, currency: p.currency, twoFactorAuth: p.twoFactorAuth })
+      .catch(err => console.error('updatePreferences:', err));
     if (typeof window !== 'undefined') {
       const theme = p.darkMode ? 'dark' : 'light';
       window.localStorage.setItem('synplix-theme', theme);
@@ -519,24 +502,27 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   const resetBusinessData = useCallback(() => {
     const uid = uidRef.current;
     if (!uid) return;
+    const deleteAll = async (colName: string) => {
+      const snaps = await getDocs(userCol(uid, colName));
+      const batch = writeBatch(db);
+      snaps.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    };
     Promise.all([
-      // Dependent tables first
-      supabase.from('attendance').delete().eq('user_id', uid),
-      supabase.from('invoice_items').delete().eq('user_id', uid),
-      supabase.from('employees').delete().eq('user_id', uid),
-      supabase.from('invoices').delete().eq('user_id', uid),
-      supabase.from('transactions').delete().eq('user_id', uid),
-      supabase.from('inventory').delete().eq('user_id', uid),
+      deleteAll('employees'),
+      deleteAll('invoices'),
+      deleteAll('transactions'),
+      deleteAll('inventory'),
     ]).then(() => {
       setEmployees([]); empRef.current = [];
       setInvoices([]); invoiceCountRef.current = 0;
       setTransactions([]);
       setInventory([]); invtRef.current = [];
-    });
+    }).catch(err => console.error('resetBusinessData:', err));
   }, []);
 
   const deleteCurrentAccount = useCallback(() => {
-    supabase.auth.signOut();
+    firebaseSignOut(auth).catch(err => console.error('deleteAccount signOut:', err));
   }, []);
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -545,14 +531,13 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   // non-null the instant signInWithPassword resolves — prevents redirect loop
   // where AppLayout sees null user before profile loads and bounces back to /.
   const currentUser = useMemo<UserAccount | null>(() => {
-    if (!session?.user) return null;
-    const u = session.user;
+    if (!session) return null;
     return {
-      id: u.id,
-      name: profile?.name ?? u.email?.split('@')[0] ?? 'User',
-      email: profile?.email ?? u.email ?? '',
+      id: session.uid,
+      name: profile?.name ?? session.displayName ?? session.email?.split('@')[0] ?? 'User',
+      email: profile?.email ?? session.email ?? '',
       password: '',
-      createdAt: u.created_at,
+      createdAt: session.metadata.creationTime ?? '',
     };
   }, [session, profile]);
 
