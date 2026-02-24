@@ -248,18 +248,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setInventory([]); invtRef.current = [];
   }, []);
 
-  // ── FIX #1: Handle ALL auth events (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED)
-  // Remove the separate getSession() — onAuthStateChange fires INITIAL_SESSION on mount.
+  // Handle ALL auth events (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, SIGNED_OUT)
+  // setReady(true) fires IMMEDIATELY after we know the session state — before refresh()
+  // completes — so AppLayout never blocks on data loading.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s?.user) {
         uidRef.current = s.user.id;
-        await refresh(s.user.id);
+        setReady(true);           // ← ready IMMEDIATELY so AppLayout can render
+        await refresh(s.user.id); // ← data loads in background
       } else {
         clearData();
+        setReady(true);
       }
-      setReady(true);
     });
     return () => subscription.unsubscribe();
   }, [refresh, clearData]);
@@ -500,9 +502,19 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
 
   // ── Derived values ────────────────────────────────────────────────────────
 
+  // currentUser derived from session ONLY (not requiring profile) so it is
+  // non-null the instant signInWithPassword resolves — prevents redirect loop
+  // where AppLayout sees null user before profile loads and bounces back to /.
   const currentUser = useMemo<UserAccount | null>(() => {
-    if (!session?.user || !profile) return null;
-    return { id: session.user.id, name: profile.name, email: profile.email, password: '', createdAt: session.user.created_at };
+    if (!session?.user) return null;
+    const u = session.user;
+    return {
+      id: u.id,
+      name: profile?.name ?? u.email?.split('@')[0] ?? 'User',
+      email: profile?.email ?? u.email ?? '',
+      password: '',
+      createdAt: u.created_at,
+    };
   }, [session, profile]);
 
   const data = useMemo(() => ({

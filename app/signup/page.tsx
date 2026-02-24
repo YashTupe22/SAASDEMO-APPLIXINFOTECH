@@ -30,10 +30,12 @@ export default function SignupPage() {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setLoading(true);
     const res = await signup(name, email, password);
-    setLoading(false);
-    if (!res.ok) { setError(res.error ?? 'Sign up failed.'); return; }
-    // After signup → go to onboarding
-    router.push('/onboarding');
+    if (!res.ok) {
+      setLoading(false);
+      setError(res.error ?? 'Sign up failed.');
+    }
+    // On success: keep spinner alive — onAuthStateChange fires, profile loads
+    // with onboardingComplete=false, AppLayout redirects to /onboarding.
   };
 
   return (

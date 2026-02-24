@@ -26,9 +26,12 @@ export default function LoginPage() {
     if (!email || !password) { setError('Please fill in all fields.'); return; }
     setLoading(true);
     const res = await login(email, password);
-    setLoading(false);
-    if (!res.ok) { setError(res.error ?? 'Login failed.'); return; }
-    router.push('/dashboard');
+    if (!res.ok) {
+      setLoading(false);
+      setError(res.error ?? 'Login failed.');
+    }
+    // On success: keep spinner alive — onAuthStateChange sets currentUser,
+    // triggering the useEffect below which redirects to /dashboard.
   };
 
   return (

@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// During Next.js build-time prerendering, NEXT_PUBLIC_* env vars are undefined
+// (they live in .env.local which is gitignored / not on the deployment server).
+// createClient throws if url is empty — use placeholder strings so the module
+// loads cleanly. No real API calls are ever made during SSR/prerender since
+// all consumer components are 'use client'.
+export const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key-for-build'
+);
