@@ -248,22 +248,43 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     setInventory([]); invtRef.current = [];
   }, []);
 
-  // Handle ALL auth events (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, SIGNED_OUT)
-  // setReady(true) fires IMMEDIATELY after we know the session state — before refresh()
-  // completes — so AppLayout never blocks on data loading.
+  // Belt-and-suspenders auth initialisation:
+  // 1. getSession()       — resolves immediately from localStorage (works offline/placeholder)
+  // 2. onAuthStateChange  — handles SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED going forward
+  // 3. 5-second timeout   — absolute safety net so ready is NEVER stuck false
   useEffect(() => {
+    let readySet = false;
+    const markReady = () => { if (!readySet) { readySet = true; setReady(true); } };
+
+    // 1. Immediate: read cached session from localStorage
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
+      if (s?.user) {
+        uidRef.current = s.user.id;
+        setSession(s);
+        markReady();
+        await refresh(s.user.id);
+      } else {
+        markReady();
+      }
+    }).catch(markReady); // even if Supabase URL is wrong, set ready
+
+    // 2. Ongoing: handle sign-in / sign-out / token refresh events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       if (s?.user) {
         uidRef.current = s.user.id;
-        setReady(true);           // ← ready IMMEDIATELY so AppLayout can render
-        await refresh(s.user.id); // ← data loads in background
+        markReady();
+        await refresh(s.user.id);
       } else {
         clearData();
-        setReady(true);
+        markReady();
       }
     });
-    return () => subscription.unsubscribe();
+
+    // 3. Safety net: never leave the user on a blank loading screen
+    const timeout = setTimeout(markReady, 5000);
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, [refresh, clearData]);
 
   // Keep invoiceCountRef in sync whenever invoices state changes
