@@ -214,7 +214,7 @@ function InvoiceForm({ title, initial, inventory, pastInvoices, onSave, onCancel
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function InvoicesPage() {
-    const { data, addInvoice, updateInvoice, toggleInvoiceStatus, updateInventory } = useAppStore();
+    const { data, addInvoice, updateInvoice, toggleInvoiceStatus, updateInventory, deleteInvoice } = useAppStore();
     const invoices = data.invoices;
     const inventory = data.inventory;
     const [showForm, setShowForm] = useState(false);
