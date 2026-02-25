@@ -55,7 +55,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </div>
                 <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Synplix</div>
-                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Business Suite</div>
+                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Business Suite v1.1</div>
                 </div>
             </div>
 

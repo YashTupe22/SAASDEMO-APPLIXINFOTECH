@@ -21,6 +21,10 @@ export default function SettingsPage() {
     const [profileDraft, setProfileDraft] = useState(data.businessProfile);
     const [prefsDraft, setPrefsDraft] = useState(data.preferences);
     const [savedMsg, setSavedMsg] = useState('');
+    const [language, setLanguage] = useState<string>(() => {
+        if (typeof window !== 'undefined') return localStorage.getItem('synplix-language') ?? 'en';
+        return 'en';
+    });
 
     const sections = useMemo<{ title: string; icon: React.ReactNode; fields: Field[] }[]>(() => {
         return [
@@ -50,8 +54,7 @@ export default function SettingsPage() {
     const toggleSettings = useMemo(() => ([
         { key: 'emailNotifications', label: 'Email Notifications', sub: 'Receive invoice and payment alerts', icon: <Bell size={15} />, enabled: prefsDraft.emailNotifications, canToggle: true },
         { key: 'darkMode', label: 'Dark Mode', sub: 'Always active in this demo UI', icon: <Moon size={15} />, enabled: prefsDraft.darkMode, canToggle: true },
-        { key: 'currency', label: 'Regional Currency', sub: `Currency: ${prefsDraft.currency}`, icon: <Globe size={15} />, enabled: true, canToggle: false },
-        { key: 'twoFactorAuth', label: 'Two-Factor Auth', sub: 'Coming soon', icon: <Shield size={15} />, enabled: prefsDraft.twoFactorAuth, canToggle: false },
+        { key: 'twoFactorAuth', label: 'Two-Factor Auth', sub: 'Require code on login', icon: <Shield size={15} />, enabled: prefsDraft.twoFactorAuth, canToggle: true },
     ]), [prefsDraft]);
 
     const saveAll = () => {
@@ -123,6 +126,53 @@ export default function SettingsPage() {
                 {/* Toggle settings */}
                 <div className="glass-card" style={{ padding: 24 }}>
                     <h2 style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 18 }}>Preferences</h2>
+                    {/* Currency Selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                <Globe size={15} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>Currency</p>
+                                <p style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>Choose your regional currency</p>
+                            </div>
+                        </div>
+                        <select
+                            value={prefsDraft.currency}
+                            onChange={e => setPrefsDraft(p => ({ ...p, currency: e.target.value }))}
+                            className="dark-input"
+                            style={{ padding: '6px 10px', fontSize: 13, width: 100 }}
+                        >
+                            <option value="INR">INR (₹)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                        </select>
+                    </div>
+                    {/* Language Switcher */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                <Globe size={15} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>Language</p>
+                                <p style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>App display language</p>
+                            </div>
+                        </div>
+                        <select
+                            value={language}
+                            onChange={e => { setLanguage(e.target.value); localStorage.setItem('synplix-language', e.target.value); }}
+                            className="dark-input"
+                            style={{ padding: '6px 10px', fontSize: 13, width: 130 }}
+                        >
+                            <option value="en">English</option>
+                            <option value="hi">हिंदी (Hindi)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="gu">ગુજરાતી (Gujarati)</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                        </select>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                         {toggleSettings.map((s, i) => (
                             <div
@@ -133,6 +183,7 @@ export default function SettingsPage() {
                                     justifyContent: 'space-between',
                                     padding: '14px 0',
                                     borderBottom: i < toggleSettings.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                    borderTop: i === 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -160,6 +211,7 @@ export default function SettingsPage() {
                                         if (!s.canToggle) return;
                                         if (s.key === 'emailNotifications') setPrefsDraft(p => ({ ...p, emailNotifications: !p.emailNotifications }));
                                         if (s.key === 'darkMode') setPrefsDraft(p => ({ ...p, darkMode: !p.darkMode }));
+                                        if (s.key === 'twoFactorAuth') setPrefsDraft(p => ({ ...p, twoFactorAuth: !p.twoFactorAuth }));
                                     }}
                                 >
                                     <div

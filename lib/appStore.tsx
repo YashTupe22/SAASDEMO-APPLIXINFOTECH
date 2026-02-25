@@ -58,6 +58,9 @@ interface AddInvoiceInput {
   date: string;
   dueDate: string;
   items: InvoiceItem[];
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
 }
 
 export interface UserAccount {
@@ -88,6 +91,7 @@ interface AppStoreContextValue {
   completeOnboarding: (info: { businessName: string; phone: string; gst: string; address: string }) => Promise<void>;
   addTransaction: (input: AddTransactionInput) => void;
   addInvoice: (input: AddInvoiceInput) => void;
+  updateInvoice: (id: string, input: Partial<AddInvoiceInput & { status: Invoice['status'] }>) => void;
   toggleInvoiceStatus: (id: string) => void;
   updateEmployees: (updater: (prev: Employee[]) => Employee[]) => void;
   updateInventory: (updater: (prev: InventoryItem[]) => InventoryItem[]) => void;
@@ -126,7 +130,20 @@ async function loadUserData(userId: string) {
 
   const employees: Employee[] = empSnaps.docs.map(d => {
     const e = d.data();
-    return { id: d.id, name: e.name, role: e.role, avatar: e.avatar, attendance: e.attendance ?? {} };
+    return {
+      id: d.id,
+      name: e.name,
+      role: e.role,
+      avatar: e.avatar,
+      attendance: e.attendance ?? {},
+      overtime: e.overtime ?? {},
+      salary: e.salary ?? 0,
+      dateOfJoining: e.dateOfJoining ?? '',
+      salaryDeductionRules: e.salaryDeductionRules ?? '',
+      email: e.email ?? '',
+      phone: e.phone ?? '',
+      aadhaar: e.aadhaar ?? '',
+    };
   });
 
   const invoices: Invoice[] = invSnaps.docs.map(d => {
@@ -139,6 +156,9 @@ async function loadUserData(userId: string) {
       dueDate: inv.dueDate,
       status: inv.status as 'Paid' | 'Pending',
       items: (inv.items ?? []) as InvoiceItem[],
+      clientEmail: inv.clientEmail ?? '',
+      clientPhone: inv.clientPhone ?? '',
+      clientAddress: inv.clientAddress ?? '',
     };
   });
 
@@ -460,6 +480,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       id, invoiceNo, client: input.client,
       date: input.date, dueDate: input.dueDate || input.date,
       items: input.items, status: 'Pending',
+      clientEmail: input.clientEmail ?? '',
+      clientPhone: input.clientPhone ?? '',
+      clientAddress: input.clientAddress ?? '',
     };
     const createdAt = new Date().toISOString();
     // 1. Update state immediately
@@ -472,9 +495,47 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         invoiceNo, client: input.client,
         date: input.date, dueDate: input.dueDate || input.date,
         status: 'Pending', items: input.items, createdAt,
+        clientEmail: input.clientEmail ?? '',
+        clientPhone: input.clientPhone ?? '',
+        clientAddress: input.clientAddress ?? '',
       }).then(() => localDb.invoices.update(id, { _syncStatus: 'synced' }).catch(console.error))
         .catch(() => console.warn('[Offline] Invoice queued for sync'));
     }
+  }, []);
+
+  // ── updateInvoice ─────────────────────────────────────────────────────────────
+
+  const updateInvoice = useCallback((id: string, input: Partial<AddInvoiceInput & { status: Invoice['status'] }>) => {
+    const uid = uidRef.current;
+    if (!uid) return;
+    setInvoices(prev => prev.map(inv => {
+      if (inv.id !== id) return inv;
+      const updated: Invoice = {
+        ...inv,
+        ...(input.client !== undefined ? { client: input.client } : {}),
+        ...(input.date !== undefined ? { date: input.date } : {}),
+        ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+        ...(input.items !== undefined ? { items: input.items } : {}),
+        ...(input.clientEmail !== undefined ? { clientEmail: input.clientEmail } : {}),
+        ...(input.clientPhone !== undefined ? { clientPhone: input.clientPhone } : {}),
+        ...(input.clientAddress !== undefined ? { clientAddress: input.clientAddress } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+      };
+      localDb.invoices.update(id, { ...updated, _syncStatus: 'pending' }).catch(console.error);
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        updateDoc(doc(userCol(uid, 'invoices'), id), {
+          client: updated.client,
+          date: updated.date,
+          dueDate: updated.dueDate,
+          items: updated.items,
+          clientEmail: updated.clientEmail ?? '',
+          clientPhone: updated.clientPhone ?? '',
+          clientAddress: updated.clientAddress ?? '',
+        }).then(() => localDb.invoices.update(id, { _syncStatus: 'synced' }).catch(console.error))
+          .catch(() => console.warn('[Offline] Invoice update queued'));
+      }
+      return updated;
+    }));
   }, []);
 
   // ── toggleInvoiceStatus ───────────────────────────────────────────────────
@@ -533,18 +594,46 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           setDoc(doc(userCol(uid, 'employees'), emp.id), {
             name: emp.name, role: emp.role, avatar: emp.avatar,
-            attendance: emp.attendance ?? {}, createdAt: now,
+            attendance: emp.attendance ?? {},
+            overtime: emp.overtime ?? {},
+            salary: emp.salary ?? 0,
+            dateOfJoining: emp.dateOfJoining ?? '',
+            salaryDeductionRules: emp.salaryDeductionRules ?? '',
+            email: emp.email ?? '',
+            phone: emp.phone ?? '',
+            aadhaar: emp.aadhaar ?? '',
+            createdAt: now,
           }).then(() => localDb.employees.update(emp.id, { _syncStatus: 'synced' }).catch(console.error))
             .catch(() => console.warn('[Offline] Employee queued'));
         }
       } else {
         const old = prev.find(e => e.id === emp.id);
-        if (old && JSON.stringify(old.attendance) !== JSON.stringify(emp.attendance)) {
-          localDb.employees.update(emp.id, { attendance: emp.attendance, _syncStatus: 'pending' }).catch(console.error);
+        if (old && JSON.stringify(old) !== JSON.stringify(emp)) {
+          const updateData = {
+            attendance: emp.attendance,
+            overtime: emp.overtime ?? {},
+            salary: emp.salary ?? 0,
+            dateOfJoining: emp.dateOfJoining ?? '',
+            salaryDeductionRules: emp.salaryDeductionRules ?? '',
+            email: emp.email ?? '',
+            phone: emp.phone ?? '',
+            aadhaar: emp.aadhaar ?? '',
+            _syncStatus: 'pending' as const,
+          };
+          localDb.employees.update(emp.id, updateData).catch(console.error);
           if (typeof navigator !== 'undefined' && navigator.onLine) {
-            updateDoc(doc(userCol(uid, 'employees'), emp.id), { attendance: emp.attendance })
+            updateDoc(doc(userCol(uid, 'employees'), emp.id), {
+              attendance: emp.attendance,
+              overtime: emp.overtime ?? {},
+              salary: emp.salary ?? 0,
+              dateOfJoining: emp.dateOfJoining ?? '',
+              salaryDeductionRules: emp.salaryDeductionRules ?? '',
+              email: emp.email ?? '',
+              phone: emp.phone ?? '',
+              aadhaar: emp.aadhaar ?? '',
+            })
               .then(() => localDb.employees.update(emp.id, { _syncStatus: 'synced' }).catch(console.error))
-              .catch(() => console.warn('[Offline] Attendance queued'));
+              .catch(() => console.warn('[Offline] Employee update queued'));
           }
         }
       }
@@ -685,7 +774,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     ready, session, profile, currentUser, data,
     login, signup, loginDemo, logout,
     completeOnboarding,
-    addTransaction, addInvoice, toggleInvoiceStatus,
+    addTransaction, addInvoice, updateInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
     resetBusinessData, deleteCurrentAccount,
     isOnline,
@@ -693,7 +782,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
   }), [
     ready, session, profile, currentUser, data,
     login, signup, loginDemo, logout, completeOnboarding,
-    addTransaction, addInvoice, toggleInvoiceStatus,
+    addTransaction, addInvoice, updateInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
     resetBusinessData, deleteCurrentAccount, isOnline, dashboard,
   ]);

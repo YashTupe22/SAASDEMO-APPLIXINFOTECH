@@ -7,6 +7,14 @@ export interface Employee {
   role: string;
   avatar: string;
   attendance: AttendanceRecord; // key: "YYYY-MM-DD", value: present | absent
+  // v1.1 extended fields
+  salary?: number;
+  dateOfJoining?: string;
+  salaryDeductionRules?: string;
+  email?: string;
+  phone?: string;
+  aadhaar?: string;
+  overtime?: Record<string, boolean>; // key: "YYYY-MM-DD", value: true = overtime
 }
 
 export const INITIAL_EMPLOYEES: Employee[] = [
@@ -33,6 +41,10 @@ export interface Invoice {
   dueDate: string;
   items: InvoiceItem[];
   status: 'Paid' | 'Pending';
+  // v1.1 client contact fields
+  clientEmail?: string;
+  clientPhone?: string;
+  clientAddress?: string;
 }
 
 export const INITIAL_INVOICES: Invoice[] = [

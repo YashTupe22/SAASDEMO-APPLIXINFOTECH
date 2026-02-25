@@ -115,6 +115,9 @@ export default function InvoicePrintPage() {
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 4 }}>Billed To</p>
             <p style={{ fontSize: 13, fontWeight: 700 }}>{invoice.client}</p>
+            {invoice.clientEmail && <p style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>Email: {invoice.clientEmail}</p>}
+            {invoice.clientPhone && <p style={{ fontSize: 11, color: '#475569' }}>Phone: {invoice.clientPhone}</p>}
+            {invoice.clientAddress && <p style={{ fontSize: 11, color: '#475569' }}>Address: {invoice.clientAddress}</p>}
           </div>
           <div style={{ fontSize: 11 }}>
             <p>

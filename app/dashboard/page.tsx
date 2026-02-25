@@ -48,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipLikeProps) => {
 };
 
 function DashboardContent() {
-    const { dashboard, currentUser, profile } = useAppStore();
+    const { dashboard, currentUser, profile, data } = useAppStore();
     const searchParams = useSearchParams();
     const [showWelcome, setShowWelcome] = useState(false);
 
@@ -260,6 +260,141 @@ function DashboardContent() {
                             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>No expense data yet. Add expenses from Transactions or Expenses page.</p>
                         )}
                     </div>
+                </div>
+            </div>
+
+            {/* Bottom Row — Last 5 Transactions + Top Clients */}
+            <div className="chart-grid" style={{ marginTop: 0 }}>
+                {/* Last 5 Transactions */}
+                <div className="glass-card" style={{ padding: 24 }}>
+                    <div style={{ marginBottom: 16 }}>
+                        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Last 5 Transactions</h2>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Most recent activity</p>
+                    </div>
+                    {(() => {
+                        const last5 = [...(data.transactions ?? [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+                        if (last5.length === 0) return (
+                            <p style={{ fontSize: 13, color: 'var(--text-secondary)', paddingTop: 8 }}>No transactions yet.</p>
+                        );
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                                {last5.map((tx, idx) => (
+                                    <div
+                                        key={tx.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '11px 0',
+                                            borderBottom: idx < last5.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div
+                                                style={{
+                                                    width: 34,
+                                                    height: 34,
+                                                    borderRadius: 8,
+                                                    background: tx.type === 'Income' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: 14,
+                                                    flexShrink: 0,
+                                                }}
+                                            >
+                                                {tx.type === 'Income' ? '↗' : '↙'}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', lineHeight: 1.3 }}>
+                                                    {tx.note || tx.category}
+                                                </p>
+                                                <p style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                                                    {new Date(tx.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })} · {tx.category}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span
+                                            style={{
+                                                fontSize: 14,
+                                                fontWeight: 700,
+                                                color: tx.type === 'Income' ? '#22c55e' : '#ef4444',
+                                                flexShrink: 0,
+                                                marginLeft: 8,
+                                            }}
+                                        >
+                                            {tx.type === 'Income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })()}
+                </div>
+
+                {/* Top Clients */}
+                <div className="glass-card" style={{ padding: 24 }}>
+                    <div style={{ marginBottom: 16 }}>
+                        <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Top Clients</h2>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Ranked by total revenue</p>
+                    </div>
+                    {(() => {
+                        const clientMap = new Map<string, number>();
+                        (data.invoices ?? []).filter(i => i.status === 'Paid').forEach(inv => {
+                            const total = inv.items.reduce((s, it) => s + it.qty * it.price, 0);
+                            clientMap.set(inv.client, (clientMap.get(inv.client) ?? 0) + total);
+                        });
+                        const sorted = Array.from(clientMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                        if (sorted.length === 0) return (
+                            <p style={{ fontSize: 13, color: 'var(--text-secondary)', paddingTop: 8 }}>No paid invoices yet.</p>
+                        );
+                        const max = sorted[0][1];
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                                {sorted.map(([client, revenue], idx) => (
+                                    <div key={client}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span
+                                                    style={{
+                                                        width: 20,
+                                                        height: 20,
+                                                        borderRadius: 6,
+                                                        background: idx === 0 ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.1)',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: 11,
+                                                        fontWeight: 700,
+                                                        color: idx === 0 ? '#f59e0b' : '#60a5fa',
+                                                    }}
+                                                >
+                                                    {idx + 1}
+                                                </span>
+                                                <span style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>{client}</span>
+                                            </div>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
+                                                ₹{revenue.toLocaleString('en-IN')}
+                                            </span>
+                                        </div>
+                                        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                            <div
+                                                style={{
+                                                    width: `${Math.round((revenue / max) * 100)}%`,
+                                                    height: '100%',
+                                                    borderRadius: 3,
+                                                    background: idx === 0
+                                                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                                                        : 'linear-gradient(90deg, #3b82f6, #06b6d4)',
+                                                    transition: 'width 0.4s ease',
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </AppLayout>
