@@ -84,6 +84,12 @@ export async function fetchAndCacheFromFirebase(uid: string): Promise<void> {
     getDocs(query(userCol(uid, 'inventory'), orderBy('createdAt'))),
   ]);
 
+  const now = new Date().toISOString();
+
+  // Read existing local employees BEFORE deleting, so we can merge missing fields
+  const existingEmps = await localDb.employees.where('_uid').equals(uid).toArray();
+  const existingEmpMap = new Map(existingEmps.map(e => [e.id, e]));
+
   // Remove only synced rows (keep pending ones created offline)
   await Promise.all([
     localDb.employees.where('_uid').equals(uid).filter(e => e._syncStatus === 'synced').delete(),
@@ -92,28 +98,46 @@ export async function fetchAndCacheFromFirebase(uid: string): Promise<void> {
     localDb.inventory.where('_uid').equals(uid).filter(i => i._syncStatus === 'synced').delete(),
   ]);
 
-  const now = new Date().toISOString();
-
   const emps = empSnaps.docs.map(d => {
     const e = d.data();
+    // Merge with existing local record — preserves fields that Firestore doc may not have yet
+    const local = existingEmpMap.get(d.id);
     return {
-      id: d.id, name: e.name, role: e.role, avatar: e.avatar,
-      attendance: e.attendance ?? {},
+      id: d.id,
+      name: e.name ?? local?.name ?? '',
+      role: e.role ?? local?.role ?? 'Team Member',
+      avatar: e.avatar ?? local?.avatar ?? '',
+      attendance: e.attendance ?? local?.attendance ?? {},
+      overtime: e.overtime ?? local?.overtime ?? {},
+      salary: e.salary ?? local?.salary ?? 0,
+      dateOfJoining: e.dateOfJoining ?? local?.dateOfJoining ?? '',
+      salaryDeductionRules: e.salaryDeductionRules ?? local?.salaryDeductionRules ?? '',
+      email: e.email ?? local?.email ?? '',
+      phone: e.phone ?? local?.phone ?? '',
+      aadhaar: e.aadhaar ?? local?.aadhaar ?? '',
       _uid: uid, _syncStatus: 'synced' as const,
-      _createdAt: e.createdAt ?? now,
+      _createdAt: e.createdAt ?? local?._createdAt ?? now,
     };
   });
   if (emps.length) await localDb.employees.bulkPut(emps);
 
+  // Read existing local invoices BEFORE deleting, so we can merge missing fields
+  const existingInvs = await localDb.invoices.where('_uid').equals(uid).toArray();
+  const existingInvMap = new Map(existingInvs.map(i => [i.id, i]));
+
   const invs = invSnaps.docs.map(d => {
     const i = d.data();
+    const local = existingInvMap.get(d.id);
     return {
       id: d.id, invoiceNo: i.invoiceNo, client: i.client,
       date: i.date, dueDate: i.dueDate,
       status: i.status as 'Paid' | 'Pending',
-      items: (i.items ?? []) as InvoiceItem[],
+      items: (i.items ?? local?.items ?? []) as InvoiceItem[],
+      clientEmail: i.clientEmail ?? local?.clientEmail ?? '',
+      clientPhone: i.clientPhone ?? local?.clientPhone ?? '',
+      clientAddress: i.clientAddress ?? local?.clientAddress ?? '',
       _uid: uid, _syncStatus: 'synced' as const,
-      _createdAt: i.createdAt ?? now,
+      _createdAt: i.createdAt ?? local?._createdAt ?? now,
     };
   });
   if (invs.length) await localDb.invoices.bulkPut(invs);
@@ -172,8 +196,17 @@ export async function syncPendingToFirebase(uid: string): Promise<number> {
     .toArray();
   for (const emp of pendingEmps) {
     await setDoc(doc(userCol(uid, 'employees'), emp.id), {
-      name: emp.name, role: emp.role, avatar: emp.avatar,
+      name: emp.name,
+      role: emp.role,
+      avatar: emp.avatar,
       attendance: emp.attendance ?? {},
+      overtime: emp.overtime ?? {},
+      salary: emp.salary ?? 0,
+      dateOfJoining: emp.dateOfJoining ?? '',
+      salaryDeductionRules: emp.salaryDeductionRules ?? '',
+      email: emp.email ?? '',
+      phone: emp.phone ?? '',
+      aadhaar: emp.aadhaar ?? '',
       createdAt: emp._createdAt,
     });
     await localDb.employees.update(emp.id, { _syncStatus: 'synced' });
@@ -190,6 +223,9 @@ export async function syncPendingToFirebase(uid: string): Promise<number> {
       invoiceNo: inv.invoiceNo, client: inv.client,
       date: inv.date, dueDate: inv.dueDate,
       status: inv.status, items: inv.items,
+      clientEmail: inv.clientEmail ?? '',
+      clientPhone: inv.clientPhone ?? '',
+      clientAddress: inv.clientAddress ?? '',
       createdAt: inv._createdAt,
     });
     await localDb.invoices.update(inv.id, { _syncStatus: 'synced' });

@@ -15,10 +15,18 @@ function getTotal(items: InvoiceItem[]) {
 
 // ── Invoice Form (shared by Create & Edit) ──────────────────────────────────
 
+interface InvOption {
+    id: string;
+    name: string;
+    sellingPrice: number;
+    currentQty: number;
+}
+
 interface InvoiceFormProps {
     title: string;
     initial?: Partial<Invoice>;
-    inventory: { id: string; name: string; sellingPrice: number }[];
+    inventory: InvOption[];
+    pastInvoices: Invoice[];
     onSave: (data: {
         client: string; date: string; dueDate: string; items: InvoiceItem[];
         clientEmail: string; clientPhone: string; clientAddress: string;
@@ -26,16 +34,34 @@ interface InvoiceFormProps {
     onCancel: () => void;
 }
 
-function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFormProps) {
+function InvoiceForm({ title, initial, inventory, pastInvoices, onSave, onCancel }: InvoiceFormProps) {
     const [client, setClient] = useState(initial?.client ?? '');
     const [date, setDate] = useState(initial?.date ?? localDate());
     const [dueDate, setDueDate] = useState(initial?.dueDate ?? '');
     const [clientEmail, setClientEmail] = useState(initial?.clientEmail ?? '');
     const [clientPhone, setClientPhone] = useState(initial?.clientPhone ?? '');
     const [clientAddress, setClientAddress] = useState(initial?.clientAddress ?? '');
+    const [clientAutoFilled, setClientAutoFilled] = useState(false);
     const [items, setItems] = useState<InvoiceItem[]>(
         initial?.items?.length ? initial.items : [{ description: '', qty: 1, price: 0 }]
     );
+
+    // ── Client auto-fill ──────────────────────────────────────────────────
+    const handleClientChange = (val: string) => {
+        setClient(val);
+        const match = pastInvoices.find(
+            inv => inv.id !== initial?.id &&
+                   inv.client.trim().toLowerCase() === val.trim().toLowerCase()
+        );
+        if (match) {
+            setClientEmail(match.clientEmail ?? '');
+            setClientPhone(match.clientPhone ?? '');
+            setClientAddress(match.clientAddress ?? '');
+            setClientAutoFilled(true);
+        } else {
+            setClientAutoFilled(false);
+        }
+    };
 
     const addItem = () => setItems(prev => [...prev, { description: '', qty: 1, price: 0 }]);
     const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
@@ -44,7 +70,7 @@ function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFor
 
     const selectInventoryItem = (i: number, itemId: string) => {
         const inv = inventory.find(it => it.id === itemId);
-        if (!inv) return;
+        if (!inv) { updateItem(i, 'description', ''); return; }
         setItems(prev => prev.map((item, idx) =>
             idx === i ? { ...item, description: inv.name, price: inv.sellingPrice } : item
         ));
@@ -52,7 +78,12 @@ function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFor
 
     const handleSave = () => {
         if (!client.trim()) return;
-        onSave({ client: client.trim(), date, dueDate: dueDate || date, items: items.filter(it => it.description.trim()), clientEmail, clientPhone, clientAddress });
+        onSave({
+            client: client.trim(), date,
+            dueDate: dueDate || date,
+            items: items.filter(it => it.description.trim()),
+            clientEmail, clientPhone, clientAddress,
+        });
     };
 
     const labelStyle = { fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 };
@@ -69,7 +100,18 @@ function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFor
             <div className="rg-3" style={{ marginBottom: 16 }}>
                 <div>
                     <label style={labelStyle}>Client Name *</label>
-                    <input className="dark-input" placeholder="Client / company" value={client} onChange={e => setClient(e.target.value)} style={inp} />
+                    <input
+                        className="dark-input"
+                        placeholder="Client / company"
+                        value={client}
+                        onChange={e => handleClientChange(e.target.value)}
+                        style={inp}
+                    />
+                    {clientAutoFilled && (
+                        <p style={{ fontSize: 11, color: '#06b6d4', marginTop: 4, fontWeight: 600 }}>
+                            ✓ Returning client — contact details auto-filled.
+                        </p>
+                    )}
                 </div>
                 <div>
                     <label style={labelStyle}>Invoice Date</label>
@@ -106,34 +148,51 @@ function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFor
                     <span style={{ width: 100, textAlign: 'right' }}>Total</span>
                     <span style={{ width: 32 }} />
                 </div>
-                {items.map((item, i) => (
-                    <div key={i} className="inv-item-row">
-                        {/* Inventory dropdown + manual fallback */}
-                        <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <select
-                                className="dark-input inv-desc"
-                                style={{ padding: '9px 12px', fontSize: 13, width: '100%' }}
-                                value={inventory.find(it => it.name === item.description)?.id ?? ''}
-                                onChange={e => {
-                                    if (e.target.value) selectInventoryItem(i, e.target.value);
-                                    else updateItem(i, 'description', '');
-                                }}
-                            >
-                                <option value="">— Select from Inventory —</option>
-                                {inventory.map(it => (
-                                    <option key={it.id} value={it.id}>{it.name} (₹{it.sellingPrice.toLocaleString('en-IN')})</option>
-                                ))}
-                            </select>
-                            <input className="dark-input inv-desc" style={{ padding: '7px 12px', fontSize: 12 }} placeholder="Or type description manually" value={item.description} onChange={e => updateItem(i, 'description', e.target.value)} />
+                {items.map((item, i) => {
+                    const invMatch = inventory.find(it => it.name === item.description);
+                    const overStock = invMatch && item.qty > invMatch.currentQty;
+                    return (
+                        <div key={i} className="inv-item-row">
+                            {/* Inventory dropdown + manual fallback */}
+                            <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <select
+                                    className="dark-input inv-desc"
+                                    style={{ padding: '9px 12px', fontSize: 13, width: '100%' }}
+                                    value={inventory.find(it => it.name === item.description)?.id ?? ''}
+                                    onChange={e => {
+                                        if (e.target.value) selectInventoryItem(i, e.target.value);
+                                        else updateItem(i, 'description', '');
+                                    }}
+                                >
+                                    <option value="">— Select from Inventory —</option>
+                                    {inventory.map(it => (
+                                        <option key={it.id} value={it.id}>
+                                            {it.name} — ₹{it.sellingPrice.toLocaleString('en-IN')} (Stock: {it.currentQty} {it.currentQty <= 0 ? '⚠ Out' : ''})
+                                        </option>
+                                    ))}
+                                </select>
+                                <input
+                                    className="dark-input inv-desc"
+                                    style={{ padding: '7px 12px', fontSize: 12 }}
+                                    placeholder="Or type description manually"
+                                    value={item.description}
+                                    onChange={e => updateItem(i, 'description', e.target.value)}
+                                />
+                                {overStock && (
+                                    <p style={{ fontSize: 11, color: '#f97316', fontWeight: 600 }}>
+                                        ⚠ Qty exceeds current stock ({invMatch!.currentQty} available)
+                                    </p>
+                                )}
+                            </div>
+                            <input className="dark-input inv-qty" style={{ width: 70, padding: '9px 10px', fontSize: 13, textAlign: 'center' }} type="number" min="1" value={item.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} />
+                            <input className="dark-input inv-price" style={{ width: 120, padding: '9px 12px', fontSize: 13 }} type="number" min="0" value={item.price} onChange={e => updateItem(i, 'price', Number(e.target.value))} />
+                            <span className="inv-total" style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
+                                ₹{(item.qty * item.price).toLocaleString('en-IN')}
+                            </span>
+                            <button onClick={() => removeItem(i)} style={{ width: 32, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
                         </div>
-                        <input className="dark-input inv-qty" style={{ width: 70, padding: '9px 10px', fontSize: 13, textAlign: 'center' }} type="number" min="1" value={item.qty} onChange={e => updateItem(i, 'qty', Number(e.target.value))} />
-                        <input className="dark-input inv-price" style={{ width: 120, padding: '9px 12px', fontSize: 13 }} type="number" min="0" value={item.price} onChange={e => updateItem(i, 'price', Number(e.target.value))} />
-                        <span className="inv-total" style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#f1f5f9' }}>
-                            ₹{(item.qty * item.price).toLocaleString('en-IN')}
-                        </span>
-                        <button onClick={() => removeItem(i)} style={{ width: 32, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} /></button>
-                    </div>
-                ))}
+                    );
+                })}
                 <button onClick={addItem} style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px dashed rgba(59,130,246,0.3)', color: '#60a5fa', fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Plus size={13} /> Add Item
                 </button>
@@ -155,20 +214,42 @@ function InvoiceForm({ title, initial, inventory, onSave, onCancel }: InvoiceFor
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function InvoicesPage() {
-    const { data, addInvoice, updateInvoice, toggleInvoiceStatus } = useAppStore();
+    const { data, addInvoice, updateInvoice, toggleInvoiceStatus, updateInventory } = useAppStore();
     const invoices = data.invoices;
     const inventory = data.inventory;
     const [showForm, setShowForm] = useState(false);
     const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
     const [preview, setPreview] = useState<Invoice | null>(null);
 
+    // ── Deduct / restore inventory qty ───────────────────────────────────────
+    const deductInventory = (items: InvoiceItem[], sign: 1 | -1) => {
+        const deltas: Record<string, number> = {};
+        for (const item of items) {
+            const match = inventory.find(
+                iv => iv.name.trim().toLowerCase() === item.description.trim().toLowerCase()
+            );
+            if (match) deltas[match.id] = (deltas[match.id] ?? 0) + item.qty * sign;
+        }
+        if (Object.keys(deltas).length === 0) return;
+        updateInventory(prev =>
+            prev.map(iv =>
+                deltas[iv.id] !== undefined
+                    ? { ...iv, currentQty: Math.max(0, iv.currentQty - deltas[iv.id]) }
+                    : iv
+            )
+        );
+    };
+
     const handleCreate = (d: Parameters<typeof addInvoice>[0]) => {
         addInvoice(d);
+        deductInventory(d.items, 1);   // deduct from stock
         setShowForm(false);
     };
 
     const handleEdit = (d: Parameters<typeof addInvoice>[0]) => {
         if (!editInvoice) return;
+        deductInventory(editInvoice.items, -1);  // restore old stock
+        deductInventory(d.items, 1);              // deduct new stock
         updateInvoice(editInvoice.id, d);
         setEditInvoice(null);
     };
@@ -176,7 +257,12 @@ export default function InvoicesPage() {
     const totalRevenue = invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + getTotal(i.items), 0);
     const totalPending = invoices.filter(i => i.status === 'Pending').reduce((s, i) => s + getTotal(i.items), 0);
 
-    const invItems = inventory.map(it => ({ id: it.id, name: it.name, sellingPrice: it.sellingPrice }));
+    const invItems = inventory.map(it => ({
+        id: it.id,
+        name: it.name,
+        sellingPrice: it.sellingPrice,
+        currentQty: it.currentQty,
+    }));
 
     return (
         <AppLayout title="Invoices" subtitle="Manage client invoices and payment status">
@@ -212,6 +298,7 @@ export default function InvoicesPage() {
                 <InvoiceForm
                     title="New Invoice"
                     inventory={invItems}
+                    pastInvoices={invoices}
                     onSave={handleCreate}
                     onCancel={() => setShowForm(false)}
                 />
@@ -223,6 +310,7 @@ export default function InvoicesPage() {
                     title={`Edit ${editInvoice.invoiceNo}`}
                     initial={editInvoice}
                     inventory={invItems}
+                    pastInvoices={invoices}
                     onSave={handleEdit}
                     onCancel={() => setEditInvoice(null)}
                 />

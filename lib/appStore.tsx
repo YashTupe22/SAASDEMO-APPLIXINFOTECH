@@ -610,6 +610,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
         const old = prev.find(e => e.id === emp.id);
         if (old && JSON.stringify(old) !== JSON.stringify(emp)) {
           const updateData = {
+            name: emp.name,
+            role: emp.role,
+            avatar: emp.avatar,
             attendance: emp.attendance,
             overtime: emp.overtime ?? {},
             salary: emp.salary ?? 0,
@@ -623,6 +626,9 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
           localDb.employees.update(emp.id, updateData).catch(console.error);
           if (typeof navigator !== 'undefined' && navigator.onLine) {
             updateDoc(doc(userCol(uid, 'employees'), emp.id), {
+              name: emp.name,
+              role: emp.role,
+              avatar: emp.avatar,
               attendance: emp.attendance,
               overtime: emp.overtime ?? {},
               salary: emp.salary ?? 0,

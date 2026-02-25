@@ -24,13 +24,31 @@ create table public.profiles (
 
 -- ── Employees ────────────────────────────────────────────────
 create table public.employees (
-  id         uuid default uuid_generate_v4() primary key,
-  user_id    uuid references auth.users(id) on delete cascade not null,
-  name       text not null,
-  role       text default 'Team Member',
-  avatar     text default '',
-  created_at timestamptz default now()
+  id                     uuid default uuid_generate_v4() primary key,
+  user_id                uuid references auth.users(id) on delete cascade not null,
+  name                   text not null,
+  role                   text default 'Team Member',
+  avatar                 text default '',
+  salary                 numeric default 0,
+  date_of_joining        date,
+  salary_deduction_rules text default '',
+  email                  text default '',
+  phone                  text default '',
+  aadhaar                text default '',
+  attendance             jsonb default '{}',
+  overtime               jsonb default '{}',
+  created_at             timestamptz default now()
 );
+
+-- Migration (run if table already exists):
+-- alter table public.employees add column if not exists salary                 numeric default 0;
+-- alter table public.employees add column if not exists date_of_joining        date;
+-- alter table public.employees add column if not exists salary_deduction_rules text default '';
+-- alter table public.employees add column if not exists email                  text default '';
+-- alter table public.employees add column if not exists phone                  text default '';
+-- alter table public.employees add column if not exists aadhaar                text default '';
+-- alter table public.employees add column if not exists attendance             jsonb default '{}';
+-- alter table public.employees add column if not exists overtime               jsonb default '{}';
 
 -- ── Attendance ───────────────────────────────────────────────
 create table public.attendance (
@@ -45,15 +63,23 @@ create table public.attendance (
 
 -- ── Invoices ─────────────────────────────────────────────────
 create table public.invoices (
-  id             uuid default uuid_generate_v4() primary key,
-  user_id        uuid references auth.users(id) on delete cascade not null,
-  invoice_no     text not null,
-  client         text not null,
-  date           date not null,
-  due_date       date not null,
-  status         text check (status in ('Paid', 'Pending')) default 'Pending',
-  created_at     timestamptz default now()
+  id              uuid default uuid_generate_v4() primary key,
+  user_id         uuid references auth.users(id) on delete cascade not null,
+  invoice_no      text not null,
+  client          text not null,
+  client_email    text default '',
+  client_phone    text default '',
+  client_address  text default '',
+  date            date not null,
+  due_date        date not null,
+  status          text check (status in ('Paid', 'Pending')) default 'Pending',
+  created_at      timestamptz default now()
 );
+
+-- Migration (run if table already exists):
+-- alter table public.invoices add column if not exists client_email   text default '';
+-- alter table public.invoices add column if not exists client_phone   text default '';
+-- alter table public.invoices add column if not exists client_address text default '';
 
 -- ── Invoice Items ────────────────────────────────────────────
 create table public.invoice_items (

@@ -35,7 +35,7 @@ function getWorkDays(year: number, month: number) {
 
 // ── Employee Profile Modal ──────────────────────────────────────────────────
 
-function EmployeeProfileModal({ emp, onClose }: { emp: Employee; onClose: () => void }) {
+function EmployeeProfileModal({ emp, onClose, onEdit }: { emp: Employee; onClose: () => void; onEdit: () => void }) {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div
@@ -43,9 +43,10 @@ function EmployeeProfileModal({ emp, onClose }: { emp: Employee; onClose: () => 
                 style={{ width: '100%', maxWidth: 480, padding: 32, position: 'relative' }}
                 onClick={e => e.stopPropagation()}
             >
-                <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                    <X size={20} />
-                </button>
+                <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
+                    <button onClick={e => { e.stopPropagation(); onEdit(); }} style={{ padding: '5px 12px', borderRadius: 8, background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Edit</button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
                     <div
                         style={{
@@ -100,13 +101,129 @@ function EmployeeProfileModal({ emp, onClose }: { emp: Employee; onClose: () => 
     );
 }
 
-// ── Add Employee Form ────────────────────────────────────────────────────────
+// ── Add / Edit Employee Form ────────────────────────────────────────────────
 
 interface NewEmpForm {
     name: string; role: string; salary: string; dateOfJoining: string;
     salaryDeductionRules: string; email: string; phone: string; aadhaar: string;
 }
 const EMPTY_FORM: NewEmpForm = { name: '', role: '', salary: '', dateOfJoining: '', salaryDeductionRules: '', email: '', phone: '', aadhaar: '' };
+
+function empToForm(emp: Employee): NewEmpForm {
+    return {
+        name: emp.name,
+        role: emp.role,
+        salary: emp.salary != null ? String(emp.salary) : '',
+        dateOfJoining: emp.dateOfJoining ?? '',
+        salaryDeductionRules: emp.salaryDeductionRules ?? '',
+        email: emp.email ?? '',
+        phone: emp.phone ?? '',
+        aadhaar: emp.aadhaar ?? '',
+    };
+}
+
+function EditEmployeeModal({
+    emp, onSave, onClose,
+}: {
+    emp: Employee;
+    onSave: (updated: Employee) => void;
+    onClose: () => void;
+}) {
+    const [form, setForm] = useState<NewEmpForm>(empToForm(emp));
+    const [errors, setErrors] = useState<Partial<Record<keyof NewEmpForm, string>>>({});
+
+    const setField = (key: keyof NewEmpForm, val: string) => {
+        setForm(f => ({ ...f, [key]: val }));
+        setErrors(e => ({ ...e, [key]: undefined }));
+    };
+
+    const validate = (): boolean => {
+        const errs: Partial<Record<keyof NewEmpForm, string>> = {};
+        if (!form.name.trim()) errs.name = 'Name is required';
+        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Invalid email';
+        if (form.phone && !/^\d{10}$/.test(form.phone.replace(/\s/g, ''))) errs.phone = '10-digit number';
+        if (form.aadhaar && !/^\d{12}$/.test(form.aadhaar.replace(/\s/g, ''))) errs.aadhaar = '12-digit Aadhaar';
+        if (form.salary && isNaN(Number(form.salary))) errs.salary = 'Enter valid salary';
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const save = () => {
+        if (!validate()) return;
+        const updated: Employee = {
+            ...emp,
+            name: form.name.trim(),
+            role: form.role.trim() || emp.role,
+            avatar: form.name.trim().split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+            salary: form.salary ? Number(form.salary) : emp.salary ?? 0,
+            dateOfJoining: form.dateOfJoining,
+            salaryDeductionRules: form.salaryDeductionRules.trim(),
+            email: form.email.trim(),
+            phone: form.phone.trim(),
+            aadhaar: form.aadhaar.trim(),
+        };
+        onSave(updated);
+    };
+
+    const inp = { padding: '10px 12px', fontSize: 13 };
+    const err = { fontSize: 11, color: '#ef4444', marginTop: 4 };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div
+                className="glass-card animate-fade-in modal-inner"
+                style={{ width: '100%', maxWidth: 560, padding: 28, position: 'relative' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={18} /></button>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>Edit Employee</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Full Name *</label>
+                        <input className="dark-input" value={form.name} onChange={e => setField('name', e.target.value)} style={inp} />
+                        {errors.name && <p style={err}>{errors.name}</p>}
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Role</label>
+                        <input className="dark-input" value={form.role} onChange={e => setField('role', e.target.value)} style={inp} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Monthly Salary (₹)</label>
+                        <input className="dark-input" type="number" value={form.salary} onChange={e => setField('salary', e.target.value)} style={inp} />
+                        {errors.salary && <p style={err}>{errors.salary}</p>}
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Date of Joining</label>
+                        <input className="dark-input" type="date" value={form.dateOfJoining} onChange={e => setField('dateOfJoining', e.target.value)} style={{ ...inp, colorScheme: 'dark' }} />
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Email</label>
+                        <input className="dark-input" type="email" value={form.email} onChange={e => setField('email', e.target.value)} style={inp} />
+                        {errors.email && <p style={err}>{errors.email}</p>}
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Phone</label>
+                        <input className="dark-input" type="tel" value={form.phone} onChange={e => setField('phone', e.target.value)} style={inp} />
+                        {errors.phone && <p style={err}>{errors.phone}</p>}
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Aadhaar Number</label>
+                        <input className="dark-input" type="text" maxLength={12} value={form.aadhaar} onChange={e => setField('aadhaar', e.target.value.replace(/\D/g, ''))} style={inp} />
+                        {errors.aadhaar && <p style={err}>{errors.aadhaar}</p>}
+                    </div>
+                    <div>
+                        <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Salary Deduction Rules</label>
+                        <input className="dark-input" value={form.salaryDeductionRules} onChange={e => setField('salaryDeductionRules', e.target.value)} style={inp} />
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+                    <button onClick={onClose} style={{ padding: '10px 18px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+                    <button className="glow-btn" onClick={save} style={{ padding: '10px 24px', fontSize: 13 }}><span>Save Changes</span></button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
@@ -125,6 +242,7 @@ export default function AttendancePage() {
     const [form, setForm] = useState<NewEmpForm>(EMPTY_FORM);
     const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewEmpForm, string>>>({});
     const [profileEmp, setProfileEmp] = useState<Employee | null>(null);
+    const [editEmp, setEditEmp] = useState<Employee | null>(null);
 
     const isCurrentMonth = viewYear === now.getFullYear() && viewMonth === now.getMonth();
 
@@ -284,6 +402,19 @@ export default function AttendancePage() {
                 </div>
             )}
 
+            {/* Edit Employee Modal */}
+            {editEmp && (
+                <EditEmployeeModal
+                    emp={editEmp}
+                    onClose={() => setEditEmp(null)}
+                    onSave={updated => {
+                        updateEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
+                        setEditEmp(null);
+                        setProfileEmp(updated);
+                    }}
+                />
+            )}
+
             {/* Today's attendance cards — only shown when viewing current month */}
             {isCurrentMonth && (
                 <div style={{ marginBottom: 28 }}>
@@ -395,7 +526,7 @@ export default function AttendancePage() {
             </div>
 
             {/* Employee Profile Modal */}
-            {profileEmp && <EmployeeProfileModal emp={profileEmp} onClose={() => setProfileEmp(null)} />}
+            {profileEmp && <EmployeeProfileModal emp={profileEmp} onClose={() => setProfileEmp(null)} onEdit={() => { setEditEmp(profileEmp); setProfileEmp(null); }} />}
         </AppLayout>
     );
 }
