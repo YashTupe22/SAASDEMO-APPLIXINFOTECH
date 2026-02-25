@@ -230,6 +230,7 @@ function EditEmployeeModal({
 export default function AttendancePage() {
     const { data, updateEmployees } = useAppStore();
     const employees = data.employees as Employee[];
+    const { deleteEmployee } = useAppStore();
 
     const now = new Date();
     const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -485,6 +486,7 @@ export default function AttendancePage() {
                                 <th>Working Days</th>
                                 <th>Attendance %</th>
                                 <th>Status</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -516,6 +518,12 @@ export default function AttendancePage() {
                                         </td>
                                         <td>
                                             <Badge variant={pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'danger'}>{pct >= 80 ? 'Good' : pct >= 60 ? 'Average' : 'Poor'}</Badge>
+                                        </td>
+                                        <td>
+                                            <button
+                                                onClick={() => { if (window.confirm(`Remove ${emp.name}?`)) deleteEmployee(emp.id); }}
+                                                style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                                            >Remove</button>
                                         </td>
                                     </tr>
                                 );

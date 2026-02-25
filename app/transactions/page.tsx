@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Badge from '@/components/ui/Badge';
 import type { TransactionType } from '@/lib/mockData';
-import { Plus, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown, Minus, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
 import { localDate } from '@/lib/utils';
 
@@ -17,7 +17,7 @@ const MONTHS = [
 ];
 
 export default function TransactionsPage() {
-    const { data, addTransaction: addTx } = useAppStore();
+    const { data, addTransaction: addTx, deleteTransaction } = useAppStore();
     const transactions = data.transactions;
     const [showForm, setShowForm] = useState(false);
     const [formType, setFormType] = useState<TransactionType>('Income');
@@ -182,8 +182,7 @@ export default function TransactionsPage() {
                             <th>Category</th>
                             <th>Note</th>
                             <th>Date</th>
-                            <th style={{ textAlign: 'right' }}>Amount</th>
-                        </tr>
+                            <th style={{ textAlign: 'right' }}>Amount</th>                            <th></th>                        </tr>
                     </thead>
                     <tbody>
                         {filtered.map(tx => (
@@ -197,11 +196,16 @@ export default function TransactionsPage() {
                                 <td style={{ textAlign: 'right', fontWeight: 700, color: tx.type === 'Income' ? '#22c55e' : '#ef4444' }}>
                                     {tx.type === 'Income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
                                 </td>
+                                <td>
+                                    <button onClick={() => { if (window.confirm('Delete this transaction?')) deleteTransaction(tx.id); }} style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <Trash2 size={12} /> Remove
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={5} style={{ textAlign: 'center', color: '#475569', padding: '32px 0' }}>
+                                <td colSpan={6} style={{ textAlign: 'center', color: '#475569', padding: '32px 0' }}>
                                     No transactions for this period.
                                 </td>
                             </tr>

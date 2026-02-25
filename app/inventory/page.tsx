@@ -5,12 +5,12 @@ import AppLayout from '@/components/layout/AppLayout';
 import StatCard from '@/components/ui/StatCard';
 import { useAppStore } from '@/lib/appStore';
 import type { InventoryItem } from '@/lib/mockData';
-import { Plus, Package2, AlertTriangle, BarChart2 } from 'lucide-react';
+import { Plus, Package2, AlertTriangle, BarChart2, Trash2 } from 'lucide-react';
 
 type DraftItem = Omit<InventoryItem, 'id'>;
 
 export default function InventoryPage() {
-  const { data, updateInventory } = useAppStore();
+  const { data, updateInventory, deleteInventoryItem } = useAppStore();
   const inventory = data.inventory as InventoryItem[];
 
   const [showForm, setShowForm] = useState(false);
@@ -418,6 +418,7 @@ export default function InventoryPage() {
                       </span>
                     </td>
                     <td>
+                      <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={() => startEdit(item)}
                         style={{
@@ -432,6 +433,13 @@ export default function InventoryPage() {
                       >
                         Edit
                       </button>
+                      <button
+                        onClick={() => { if (window.confirm(`Delete ${item.name}?`)) deleteInventoryItem(item.id); }}
+                        style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Trash2 size={12} /> Remove
+                      </button>
+                      </div>
                     </td>
                   </tr>
                 );

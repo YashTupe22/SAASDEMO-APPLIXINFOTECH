@@ -5,7 +5,7 @@ import Link from 'next/link';
 import AppLayout from '@/components/layout/AppLayout';
 import Badge from '@/components/ui/Badge';
 import type { Invoice, InvoiceItem } from '@/lib/mockData';
-import { Plus, X, Eye, Check, FileText, Edit2 } from 'lucide-react';
+import { Plus, X, Eye, Check, FileText, Edit2, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/lib/appStore';
 import { localDate } from '@/lib/utils';
 
@@ -363,6 +363,12 @@ export default function InvoicesPage() {
                                             >
                                                 GST
                                             </Link>
+                                            <button
+                                                onClick={() => { if (window.confirm(`Delete invoice ${inv.invoiceNo}?`)) deleteInvoice(inv.id); }}
+                                                style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+                                            >
+                                                <Trash2 size={12} /> Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

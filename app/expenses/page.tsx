@@ -5,7 +5,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import Badge from '@/components/ui/Badge';
 import { useAppStore } from '@/lib/appStore';
 import { localDate } from '@/lib/utils';
-import { Plus, X, TrendingDown } from 'lucide-react';
+import { Plus, X, TrendingDown, Trash2 } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = ['Salaries', 'Infrastructure', 'Software', 'Marketing', 'Office', 'Travel', 'Misc'];
 
@@ -15,7 +15,7 @@ const MONTHS = [
 ];
 
 export default function ExpensesPage() {
-  const { data, addTransaction } = useAppStore();
+  const { data, addTransaction, deleteTransaction } = useAppStore();
 
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState('');
@@ -188,6 +188,7 @@ export default function ExpensesPage() {
               <th>Note</th>
               <th>Date</th>
               <th style={{ textAlign: 'right' }}>Amount</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -202,11 +203,16 @@ export default function ExpensesPage() {
                 <td style={{ textAlign: 'right', fontWeight: 800, color: '#ef4444' }}>
                   -₹{tx.amount.toLocaleString('en-IN')}
                 </td>
+                <td>
+                  <button onClick={() => { if (window.confirm('Delete this expense?')) deleteTransaction(tx.id); }} style={{ padding: '5px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Trash2 size={12} /> Remove
+                  </button>
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', color: '#475569', padding: '32px 0' }}>
+                <td colSpan={6} style={{ textAlign: 'center', color: '#475569', padding: '32px 0' }}>
                   No expenses for this period.
                 </td>
               </tr>

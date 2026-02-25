@@ -97,6 +97,10 @@ interface AppStoreContextValue {
   updateInventory: (updater: (prev: InventoryItem[]) => InventoryItem[]) => void;
   updateBusinessProfile: (p: { businessName: string; email: string; phone: string; gst: string; address: string }) => void;
   updatePreferences: (p: { emailNotifications: boolean; darkMode: boolean; currency: string; twoFactorAuth: boolean }) => void;
+  deleteEmployee: (id: string) => void;
+  deleteInvoice: (id: string) => void;
+  deleteTransaction: (id: string) => void;
+  deleteInventoryItem: (id: string) => void;
   resetBusinessData: () => void;
   deleteCurrentAccount: () => void;
   isOnline: boolean;
@@ -723,6 +727,46 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ── Individual delete actions ─────────────────────────────────────────────
+
+  const deleteEmployee = useCallback((id: string) => {
+    const uid = uidRef.current;
+    empRef.current = empRef.current.filter(e => e.id !== id);
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    localDb.employees.delete(id).catch(console.error);
+    if (uid && typeof navigator !== 'undefined' && navigator.onLine) {
+      deleteDoc(doc(userCol(uid, 'employees'), id)).catch(console.error);
+    }
+  }, []);
+
+  const deleteInvoice = useCallback((id: string) => {
+    const uid = uidRef.current;
+    setInvoices(prev => prev.filter(i => i.id !== id));
+    localDb.invoices.delete(id).catch(console.error);
+    if (uid && typeof navigator !== 'undefined' && navigator.onLine) {
+      deleteDoc(doc(userCol(uid, 'invoices'), id)).catch(console.error);
+    }
+  }, []);
+
+  const deleteTransaction = useCallback((id: string) => {
+    const uid = uidRef.current;
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    localDb.transactions.delete(id).catch(console.error);
+    if (uid && typeof navigator !== 'undefined' && navigator.onLine) {
+      deleteDoc(doc(userCol(uid, 'transactions'), id)).catch(console.error);
+    }
+  }, []);
+
+  const deleteInventoryItem = useCallback((id: string) => {
+    const uid = uidRef.current;
+    invtRef.current = invtRef.current.filter(i => i.id !== id);
+    setInventory(prev => prev.filter(i => i.id !== id));
+    localDb.inventory.delete(id).catch(console.error);
+    if (uid && typeof navigator !== 'undefined' && navigator.onLine) {
+      deleteDoc(doc(userCol(uid, 'inventory'), id)).catch(console.error);
+    }
+  }, []);
+
   const resetBusinessData = useCallback(() => {
     const uid = uidRef.current;
     if (!uid) return;
@@ -793,6 +837,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     completeOnboarding,
     addTransaction, addInvoice, updateInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
+    deleteEmployee, deleteInvoice, deleteTransaction, deleteInventoryItem,
     resetBusinessData, deleteCurrentAccount,
     isOnline,
     dashboard,
@@ -801,6 +846,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     login, signup, loginDemo, logout, completeOnboarding,
     addTransaction, addInvoice, updateInvoice, toggleInvoiceStatus,
     updateEmployees, updateInventory, updateBusinessProfile, updatePreferences,
+    deleteEmployee, deleteInvoice, deleteTransaction, deleteInventoryItem,
     resetBusinessData, deleteCurrentAccount, isOnline, dashboard,
   ]);
 
