@@ -15,6 +15,7 @@ export default function InventoryPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [mergeTarget, setMergeTarget] = useState<InventoryItem | null>(null);
   const [draft, setDraft] = useState<DraftItem>({
     name: '',
     sku: '',
@@ -38,6 +39,7 @@ export default function InventoryPage() {
 
   const startAdd = () => {
     setEditingId(null);
+    setMergeTarget(null);
     setDraft({
       name: '',
       sku: '',
@@ -55,6 +57,7 @@ export default function InventoryPage() {
 
   const startEdit = (item: InventoryItem) => {
     setEditingId(item.id);
+    setMergeTarget(null);
     const { ...rest } = item;
     setDraft(rest);
     setShowForm(true);
@@ -68,19 +71,42 @@ export default function InventoryPage() {
         prev.map(i => (i.id === editingId ? { ...i, ...draft, name: draft.name.trim(), sku: draft.sku.trim() } : i)),
       );
     } else {
-      const id = 'inv-item-' + Date.now().toString(36);
-      updateInventory(prev => [
-        ...prev,
-        {
-          id,
-          ...draft,
-          name: draft.name.trim(),
-          sku: draft.sku.trim(),
-        },
-      ]);
+      const trimmedName = draft.name.trim().toLowerCase();
+      const existing = inventory.find(i => i.name.trim().toLowerCase() === trimmedName);
+      if (existing) {
+        // Merge: add the user-entered qtys on top of existing stock
+        const addOpening = Number(draft.openingQty) || 0;
+        const addCurrent = Number(draft.currentQty) || 0;
+        updateInventory(prev =>
+          prev.map(i =>
+            i.id === existing.id
+              ? {
+                  ...i,
+                  openingQty:    i.openingQty + addOpening,
+                  currentQty:    i.currentQty + addCurrent,
+                  // Update prices only if the user changed them from the auto-filled values
+                  purchasePrice: draft.purchasePrice > 0 ? draft.purchasePrice : i.purchasePrice,
+                  sellingPrice:  draft.sellingPrice  > 0 ? draft.sellingPrice  : i.sellingPrice,
+                }
+              : i,
+          ),
+        );
+      } else {
+        const id = 'inv-item-' + Date.now().toString(36);
+        updateInventory(prev => [
+          ...prev,
+          {
+            id,
+            ...draft,
+            name: draft.name.trim(),
+            sku: draft.sku.trim(),
+          },
+        ]);
+      }
     }
     setShowForm(false);
     setEditingId(null);
+    setMergeTarget(null);
   };
 
   return (
@@ -167,9 +193,41 @@ export default function InventoryPage() {
                 className="dark-input"
                 placeholder="e.g. Cloud Server Credits"
                 value={draft.name}
-                onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value;
+                  setDraft(d => ({ ...d, name: val }));
+                  if (!editingId) {
+                    const match = inventory.find(
+                      i => i.name.trim().toLowerCase() === val.trim().toLowerCase()
+                    );
+                    if (match) {
+                      setMergeTarget(match);
+                      setDraft(d => ({
+                        ...d,
+                        name: val,
+                        sku: match.sku,
+                        category: match.category,
+                        unit: match.unit,
+                        purchasePrice: match.purchasePrice,
+                        sellingPrice: match.sellingPrice,
+                        reorderLevel: match.reorderLevel,
+                        gstRate: match.gstRate,
+                        // qty fields stay 0 — user enters new stock
+                        openingQty: 0,
+                        currentQty: 0,
+                      }));
+                    } else {
+                      setMergeTarget(null);
+                    }
+                  }
+                }}
                 style={{ padding: '10px 12px', fontSize: 14 }}
               />
+              {mergeTarget && (
+                <p style={{ fontSize: 11, color: '#06b6d4', marginTop: 5, fontWeight: 600 }}>
+                  ✓ Existing item found — SKU / prices auto-filled. Enter qty to add to current stock ({mergeTarget.currentQty} {mergeTarget.unit}).
+                </p>
+              )}
             </div>
             <div>
               <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>SKU / Code *</label>
@@ -294,6 +352,7 @@ export default function InventoryPage() {
               onClick={() => {
                 setShowForm(false);
                 setEditingId(null);
+                setMergeTarget(null);
               }}
               style={{
                 padding: '9px 18px',

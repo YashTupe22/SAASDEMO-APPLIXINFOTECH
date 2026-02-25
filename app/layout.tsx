@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppStoreProvider } from "@/lib/appStore";
+import { LanguageProvider } from "@/lib/i18n";
 import SwRegister from "@/components/SwRegister";
 
 export const metadata: Metadata = {
@@ -35,8 +36,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AppStoreProvider>
-          <SwRegister />
-          {children}
+          <LanguageProvider>
+            <SwRegister />
+            {children}
+          </LanguageProvider>
         </AppStoreProvider>
       </body>
     </html>

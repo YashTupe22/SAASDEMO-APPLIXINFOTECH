@@ -1,11 +1,12 @@
 'use client';
 
 import AppLayout from '@/components/layout/AppLayout';
-import { Building2, Bell, Moon, Globe, Shield, User, Download } from 'lucide-react';
+import { Building2, Bell, Globe, Shield, User, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/appStore';
 import { exportAppDataToExcel } from '@/lib/exportExcel';
+import { useTranslation, type Lang } from '@/lib/i18n';
 
 type ProfileFieldKey = 'businessName' | 'email' | 'phone' | 'gst' | 'address';
 type AccountFieldKey = 'adminName' | 'loginEmail' | 'password';
@@ -21,10 +22,7 @@ export default function SettingsPage() {
     const [profileDraft, setProfileDraft] = useState(data.businessProfile);
     const [prefsDraft, setPrefsDraft] = useState(data.preferences);
     const [savedMsg, setSavedMsg] = useState('');
-    const [language, setLanguage] = useState<string>(() => {
-        if (typeof window !== 'undefined') return localStorage.getItem('synplix-language') ?? 'en';
-        return 'en';
-    });
+    const { lang, setLang, t } = useTranslation();
 
     const sections = useMemo<{ title: string; icon: React.ReactNode; fields: Field[] }[]>(() => {
         return [
@@ -52,15 +50,14 @@ export default function SettingsPage() {
     }, [profileDraft, currentUser]);
 
     const toggleSettings = useMemo(() => ([
-        { key: 'emailNotifications', label: 'Email Notifications', sub: 'Receive invoice and payment alerts', icon: <Bell size={15} />, enabled: prefsDraft.emailNotifications, canToggle: true },
-        { key: 'darkMode', label: 'Dark Mode', sub: 'Always active in this demo UI', icon: <Moon size={15} />, enabled: prefsDraft.darkMode, canToggle: true },
-        { key: 'twoFactorAuth', label: 'Two-Factor Auth', sub: 'Require code on login', icon: <Shield size={15} />, enabled: prefsDraft.twoFactorAuth, canToggle: true },
+        { key: 'emailNotifications', label: t('settings.emailNotif'), sub: t('settings.emailNotifSub'), icon: <Bell size={15} />, enabled: prefsDraft.emailNotifications, canToggle: true },
+        { key: 'twoFactorAuth', label: t('settings.twoFactor'), sub: t('settings.twoFactorSub'), icon: <Shield size={15} />, enabled: prefsDraft.twoFactorAuth, canToggle: true },
     ]), [prefsDraft]);
 
     const saveAll = () => {
         updateBusinessProfile(profileDraft);
         updatePreferences(prefsDraft);
-        setSavedMsg('Saved locally.');
+        setSavedMsg(t('settings.saved'));
         window.setTimeout(() => setSavedMsg(''), 1400);
     };
 
@@ -70,7 +67,7 @@ export default function SettingsPage() {
         resetBusinessData();
         setProfileDraft(data.businessProfile);
         setPrefsDraft(data.preferences);
-        setSavedMsg('Reset to defaults.');
+        setSavedMsg(t('settings.reset'));
         window.setTimeout(() => setSavedMsg(''), 1400);
     };
 
@@ -91,12 +88,12 @@ export default function SettingsPage() {
                             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {sec.icon}
                             </div>
-                            <h2 style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{sec.title}</h2>
+                            <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{sec.title}</h2>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             {sec.fields.map(field => (
                                 <div key={field.label} className="setting-row">
-                                    <label style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>{field.label}</label>
+                                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{field.label}</label>
                                     <input
                                         className="dark-input"
                                         type={field.type}
@@ -125,7 +122,7 @@ export default function SettingsPage() {
 
                 {/* Toggle settings */}
                 <div className="glass-card" style={{ padding: 24 }}>
-                    <h2 style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 18 }}>Preferences</h2>
+                    <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 18 }}>{t('settings.preferences')}</h2>
                     {/* Currency Selector */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -133,8 +130,8 @@ export default function SettingsPage() {
                                 <Globe size={15} />
                             </div>
                             <div>
-                                <p style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>Currency</p>
-                                <p style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>Choose your regional currency</p>
+                                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{t('settings.currency')}</p>
+                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{t('settings.currencySub')}</p>
                             </div>
                         </div>
                         <select
@@ -156,13 +153,13 @@ export default function SettingsPage() {
                                 <Globe size={15} />
                             </div>
                             <div>
-                                <p style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>Language</p>
-                                <p style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>App display language</p>
+                                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{t('settings.language')}</p>
+                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{t('settings.langSub')}</p>
                             </div>
                         </div>
                         <select
-                            value={language}
-                            onChange={e => { setLanguage(e.target.value); localStorage.setItem('synplix-language', e.target.value); }}
+                            value={lang}
+                            onChange={e => setLang(e.target.value as Lang)}
                             className="dark-input"
                             style={{ padding: '6px 10px', fontSize: 13, width: 130 }}
                         >
@@ -191,8 +188,8 @@ export default function SettingsPage() {
                                         {s.icon}
                                     </div>
                                     <div>
-                                        <p style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>{s.label}</p>
-                                        <p style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>{s.sub}</p>
+                                        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{s.label}</p>
+                                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{s.sub}</p>
                                     </div>
                                 </div>
                                 {/* Toggle */}
@@ -210,7 +207,6 @@ export default function SettingsPage() {
                                     onClick={() => {
                                         if (!s.canToggle) return;
                                         if (s.key === 'emailNotifications') setPrefsDraft(p => ({ ...p, emailNotifications: !p.emailNotifications }));
-                                        if (s.key === 'darkMode') setPrefsDraft(p => ({ ...p, darkMode: !p.darkMode }));
                                         if (s.key === 'twoFactorAuth') setPrefsDraft(p => ({ ...p, twoFactorAuth: !p.twoFactorAuth }));
                                     }}
                                 >
@@ -235,7 +231,7 @@ export default function SettingsPage() {
 
                 {/* Data & Export */}
                 <div className="glass-card" style={{ padding: 24 }}>
-                    <h2 style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 10 }}>Data & Export</h2>
+                    <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10 }}>Data &amp; Export</h2>
                     <p style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>
                         Download a full snapshot of your current workspace — employees, invoices, transactions, inventory and basic settings — in an Excel file.
                     </p>

@@ -664,10 +664,21 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
             .catch(() => console.warn('[Offline] Inventory queued'));
         }
       } else {
-        localDb.inventory.update(item.id, { currentQty: item.currentQty, sellingPrice: item.sellingPrice, reorderLevel: item.reorderLevel, _syncStatus: 'pending' }).catch(console.error);
+        localDb.inventory.update(item.id, {
+          openingQty:    item.openingQty,
+          currentQty:    item.currentQty,
+          purchasePrice: item.purchasePrice,
+          sellingPrice:  item.sellingPrice,
+          reorderLevel:  item.reorderLevel,
+          _syncStatus: 'pending',
+        }).catch(console.error);
         if (typeof navigator !== 'undefined' && navigator.onLine) {
           updateDoc(doc(userCol(uid, 'inventory'), item.id), {
-            currentQty: item.currentQty, sellingPrice: item.sellingPrice, reorderLevel: item.reorderLevel,
+            openingQty:    item.openingQty,
+            currentQty:    item.currentQty,
+            purchasePrice: item.purchasePrice,
+            sellingPrice:  item.sellingPrice,
+            reorderLevel:  item.reorderLevel,
           }).then(() => localDb.inventory.update(item.id, { _syncStatus: 'synced' }).catch(console.error))
             .catch(() => console.warn('[Offline] Inventory update queued'));
         }

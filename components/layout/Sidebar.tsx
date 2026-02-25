@@ -16,15 +16,16 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '@/lib/appStore';
+import { useTranslation } from '@/lib/i18n';
 
-const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/attendance', label: 'Attendance', icon: Users },
-    { href: '/invoices', label: 'Invoices', icon: FileText },
-    { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-    { href: '/inventory', label: 'Inventory', icon: Boxes },
-    { href: '/expenses', label: 'Expenses', icon: Wallet },
-    { href: '/settings', label: 'Settings', icon: Settings },
+const NAV_ITEMS = [
+    { href: '/dashboard', key: 'nav.dashboard' as const, icon: LayoutDashboard },
+    { href: '/attendance', key: 'nav.attendance' as const, icon: Users },
+    { href: '/invoices', key: 'nav.invoices' as const, icon: FileText },
+    { href: '/transactions', key: 'nav.transactions' as const, icon: ArrowLeftRight },
+    { href: '/inventory', key: 'nav.inventory' as const, icon: Boxes },
+    { href: '/expenses', key: 'nav.expenses' as const, icon: Wallet },
+    { href: '/settings', key: 'nav.settings' as const, icon: Settings },
 ];
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { logout } = useAppStore();
+    const { t } = useTranslation();
 
     return (
         <aside className={clsx('sidebar', isOpen && 'sidebar--open')}>
@@ -54,17 +56,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <Zap size={18} color="white" />
                 </div>
                 <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Synplix</div>
-                    <div style={{ fontSize: 11, color: '#64748b', lineHeight: 1.2 }}>Business Suite v1.1</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Synplix</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.2 }}>Business Suite v1.1</div>
                 </div>
             </div>
 
             {/* Nav */}
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 6 }}>
-                    Main Menu
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '0 8px', marginBottom: 6 }}>
+                    {t('nav.mainMenu')}
                 </div>
-                {navItems.map(({ href, label, icon: Icon }) => {
+                {NAV_ITEMS.map(({ href, key, icon: Icon }) => {
                     const active = pathname === href || pathname.startsWith(href + '/');
                     return (
                         <Link
@@ -74,7 +76,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             onClick={onClose}
                         >
                             <Icon size={17} />
-                            {label}
+                            {t(key)}
                         </Link>
                     );
                 })}
@@ -93,7 +95,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left' }}
                 >
                     <LogOut size={17} />
-                    Logout
+                    {t('nav.logout')}
                 </button>
             </div>
         </aside>
